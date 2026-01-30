@@ -1,0 +1,2970 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Pitsco Education | Prizm Pro MicroPython IDE</title>
+  <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+  <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+  <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+  <script src="https://cdn.tailwindcss.com"></script>
+  
+  <!-- Prism.js for syntax highlighting -->
+  <link href="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/themes/prism-tomorrow.min.css" rel="stylesheet" />
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/prism.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-python.min.js"></script>
+  
+  <style>
+    /* Custom Thonny-inspired theme */
+    .code-editor-container {
+      position: relative;
+      font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', 'Consolas', monospace;
+      font-size: 14px;
+      line-height: 1.6;
+    }
+    
+    .code-editor-textarea {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      padding: 1rem;
+      margin: 0;
+      border: none;
+      background: transparent;
+      color: transparent;
+      caret-color: #fff;
+      resize: none;
+      outline: none;
+      white-space: pre;
+      overflow-wrap: normal;
+      overflow-x: auto;
+      font-family: inherit;
+      font-size: inherit;
+      line-height: inherit;
+      tab-size: 4;
+      z-index: 1;
+    }
+    
+    .code-editor-highlight {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      padding: 1rem;
+      margin: 0;
+      border: none;
+      background: transparent;
+      color: #e0e0e0;
+      pointer-events: none;
+      white-space: pre;
+      overflow-wrap: normal;
+      overflow-x: auto;
+      font-family: inherit;
+      font-size: inherit;
+      line-height: inherit;
+      tab-size: 4;
+      z-index: 0;
+    }
+    
+    /* Thonny-style syntax colors */
+    .token.keyword { color: #ff7700; font-weight: bold; } /* def, import, class, etc */
+    .token.string { color: #00aa00; } /* strings */
+    .token.number { color: #0088ff; } /* numbers */
+    .token.comment { color: #999999; font-style: italic; } /* comments */
+    .token.function { color: #00dddd; } /* function names */
+    .token.builtin { color: #dd00dd; } /* print, len, range, etc */
+    .token.operator { color: #ffffff; } /* +, -, *, etc */
+    .token.punctuation { color: #cccccc; } /* (), [], {}, etc */
+    .token.class-name { color: #ffaa00; } /* class names */
+  </style>
+</head>
+<body>
+  <div id="root"></div>
+
+  <script type="text/babel">
+    const { useState, useRef, useEffect } = React;
+
+    // Lucide React icons as inline SVG components
+    const Wifi = (props) => (
+      <svg {...props} fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8.111 16.404a5.5 5.5 0 017.778 0M12 20h.01m-7.08-7.071c3.904-3.905 10.236-3.905 14.141 0M1.394 9.393c5.857-5.857 15.355-5.857 21.213 0" />
+      </svg>
+    );
+
+    const Bluetooth = (props) => (
+      <svg {...props} fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 2L6 7l6 5V2zm0 0l6 5-6 5m0 0v10l6-5-6-5m0 0L6 17l6 5" />
+      </svg>
+    );
+
+    const Upload = (props) => (
+      <svg {...props} fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
+      </svg>
+    );
+
+    const Download = (props) => (
+      <svg {...props} fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M9 11l3 3m0 0l3-3m-3 3V8" />
+      </svg>
+    );
+
+    const Play = (props) => (
+      <svg {...props} fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z" />
+        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+      </svg>
+    );
+
+    const Folder = (props) => (
+      <svg {...props} fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z" />
+      </svg>
+    );
+
+    const File = (props) => (
+      <svg {...props} fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z" />
+      </svg>
+    );
+
+    const Trash2 = (props) => (
+      <svg {...props} fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+      </svg>
+    );
+
+    const Plus = (props) => (
+      <svg {...props} fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+      </svg>
+    );
+
+    const Book = (props) => (
+      <svg {...props} fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" />
+      </svg>
+    );
+
+    const Zap = (props) => (
+      <svg {...props} fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
+      </svg>
+    );
+
+    const Terminal = (props) => (
+      <svg {...props} fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 9l3 3-3 3m5 0h3M5 20h14a2 2 0 002-2V6a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+      </svg>
+    );
+
+    const Code = (props) => (
+      <svg {...props} fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 20l4-16m4 4l4 4-4 4M6 16l-4-4 4-4" />
+      </svg>
+    );
+
+    const Save = (props) => (
+      <svg {...props} fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7H5a2 2 0 00-2 2v9a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-3m-1 4l-3 3m0 0l-3-3m3 3V4" />
+      </svg>
+    );
+
+    const X = (props) => (
+      <svg {...props} fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+      </svg>
+    );
+
+    const AlertCircle = (props) => (
+      <svg {...props} fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+      </svg>
+    );
+
+    // Syntax Highlighted Code Editor Component
+    const SyntaxHighlightedEditor = ({ value, onChange }) => {
+      const textareaRef = useRef(null);
+      const highlightRef = useRef(null);
+      
+      // Synchronize scrolling between textarea and highlight layer
+      const handleScroll = () => {
+        if (textareaRef.current && highlightRef.current) {
+          highlightRef.current.scrollTop = textareaRef.current.scrollTop;
+          highlightRef.current.scrollLeft = textareaRef.current.scrollLeft;
+        }
+      };
+      
+      // Update syntax highlighting when code changes
+      const highlightedCode = () => {
+        if (typeof Prism !== 'undefined') {
+          return Prism.highlight(value, Prism.languages.python, 'python');
+        }
+        return value;
+      };
+      
+      const handleKeyDown = (e) => {
+        // Handle Tab key for indentation
+        if (e.key === 'Tab') {
+          e.preventDefault();
+          const start = e.target.selectionStart;
+          const end = e.target.selectionEnd;
+          const newValue = value.substring(0, start) + '    ' + value.substring(end);
+          onChange({ target: { value: newValue } });
+          
+          // Set cursor position after the inserted tab
+          setTimeout(() => {
+            e.target.selectionStart = e.target.selectionEnd = start + 4;
+          }, 0);
+        }
+      };
+      
+      return (
+        <div className="code-editor-container flex-1 bg-slate-950/50 relative overflow-hidden">
+          <pre
+            ref={highlightRef}
+            className="code-editor-highlight"
+            aria-hidden="true"
+          >
+            <code
+              className="language-python"
+              dangerouslySetInnerHTML={{ __html: highlightedCode() }}
+            />
+          </pre>
+          <textarea
+            ref={textareaRef}
+            value={value}
+            onChange={onChange}
+            onScroll={handleScroll}
+            onKeyDown={handleKeyDown}
+            className="code-editor-textarea"
+            spellCheck={false}
+            autoCapitalize="off"
+            autoComplete="off"
+            autoCorrect="off"
+          />
+        </div>
+      );
+    };
+
+    const PrizmProIDE = () => {
+      const [connected, setConnected] = useState(false);
+      const [connectionType, setConnectionType] = useState(null);
+      const [port, setPort] = useState(null);
+      const [device, setDevice] = useState(null);
+      const [characteristic, setCharacteristic] = useState(null);
+      
+      const STARTER_TEMPLATE = `from prizm_pro import PrizmPro
+import time
+prizm = PrizmPro()
+prizm.Begin()
+
+# Your code here
+`;
+      
+      const [code, setCode] = useState(STARTER_TEMPLATE);
+      const [filename, setFilename] = useState('main.py');
+      const [replOutput, setReplOutput] = useState('Prizm Pro MicroPython REPL\nConnect to your controller to begin.\n\n');
+      const [replInput, setReplInput] = useState('');
+      const [files, setFiles] = useState([]);
+      const [selectedFile, setSelectedFile] = useState(null);
+      
+      const [showGuide, setShowGuide] = useState(false);
+      const [showFlasher, setShowFlasher] = useState(false);
+      const [flashProgress, setFlashProgress] = useState(0);
+      const [flashStatus, setFlashStatus] = useState('');
+      
+      const [activeTab, setActiveTab] = useState('editor');
+      
+      const replRef = useRef(null);
+      const fileInputRef = useRef(null);
+      const firmwareInputRef = useRef(null);
+      const editorRef = useRef(null);
+      const readerRef = useRef(null);
+      const readableStreamClosedRef = useRef(null);
+
+      const [notification, setNotification] = useState(null);
+
+      const showNotification = (message, type = 'info') => {
+        setNotification({ message, type });
+        setTimeout(() => setNotification(null), 3000);
+      };
+
+      const connectUSB = async () => {
+        try {
+          const selectedPort = await navigator.serial.requestPort({
+            filters: [
+              { usbVendorId: 0x21FA, usbProductId: 0x8134 } // Pitsco Prizm Pro
+            ]
+          });
+          await selectedPort.open({ baudRate: 115200 });
+          
+          setPort(selectedPort);
+          setConnected(true);
+          setConnectionType('usb');
+          
+          setReplOutput(prev => prev + '>>> Connected via USB\n');
+          showNotification('Connected via USB', 'success');
+          
+          readFromPort(selectedPort);
+          
+          setTimeout(() => listFiles(), 1000);
+        } catch (error) {
+          console.error('USB connection error:', error);
+          
+          // Reset state on error
+          setPort(null);
+          setConnected(false);
+          setConnectionType(null);
+          
+          showNotification('Failed to connect via USB: ' + error.message, 'error');
+        }
+      };
+
+      const connectBLE = async () => {
+        try {
+          // Try to find devices advertising the NUS service OR with "Prizm" in the name
+          const bleDevice = await navigator.bluetooth.requestDevice({
+            filters: [
+              { services: ['6e400001-b5a3-f393-e0a9-e50e24dcca9e'] },
+              { namePrefix: 'Prizm' },
+              { namePrefix: 'PRIZM' }
+            ],
+            optionalServices: ['6e400001-b5a3-f393-e0a9-e50e24dcca9e']
+          });
+          
+          const server = await bleDevice.gatt.connect();
+          const service = await server.getPrimaryService('6e400001-b5a3-f393-e0a9-e50e24dcca9e');
+          const rxCharacteristic = await service.getCharacteristic('6e400002-b5a3-f393-e0a9-e50e24dcca9e');
+          const txCharacteristic = await service.getCharacteristic('6e400003-b5a3-f393-e0a9-e50e24dcca9e');
+          
+          await txCharacteristic.startNotifications();
+          txCharacteristic.addEventListener('characteristicvaluechanged', (event) => {
+            const value = new TextDecoder().decode(event.target.value);
+            setReplOutput(prev => prev + value);
+          });
+          
+          setDevice(bleDevice);
+          setCharacteristic(rxCharacteristic);
+          setConnected(true);
+          setConnectionType('ble');
+          
+          setReplOutput(prev => prev + '>>> Connected via Bluetooth\n');
+          showNotification('Connected via Bluetooth', 'success');
+          
+          setTimeout(() => listFiles(), 1000);
+        } catch (error) {
+          console.error('BLE connection error:', error);
+          
+          // Reset state on error
+          setDevice(null);
+          setCharacteristic(null);
+          setConnected(false);
+          setConnectionType(null);
+          
+          showNotification('Failed to connect via Bluetooth: ' + error.message, 'error');
+        }
+      };
+
+      const disconnect = async () => {
+        try {
+          // Cancel the reader first if it exists
+          if (readerRef.current) {
+            try {
+              await readerRef.current.cancel();
+              readerRef.current = null;
+            } catch (error) {
+              console.error('Error canceling reader:', error);
+            }
+          }
+          
+          // Wait for the readable stream to close
+          if (readableStreamClosedRef.current) {
+            try {
+              await readableStreamClosedRef.current.catch(() => {}); // Ignore errors from cancelled stream
+              readableStreamClosedRef.current = null;
+            } catch (error) {
+              console.error('Error closing readable stream:', error);
+            }
+          }
+          
+          // Close the port
+          if (port) {
+            try {
+              await port.close();
+            } catch (error) {
+              console.error('Error closing port:', error);
+            }
+          }
+          
+          // Disconnect Bluetooth if connected
+          if (device && device.gatt.connected) {
+            device.gatt.disconnect();
+          }
+          
+          setPort(null);
+          setDevice(null);
+          setCharacteristic(null);
+          setConnected(false);
+          setConnectionType(null);
+          setReplOutput(prev => prev + '>>> Disconnected\n');
+          showNotification('Disconnected', 'info');
+        } catch (error) {
+          console.error('Disconnect error:', error);
+          // Force reset state even if there's an error
+          setPort(null);
+          setDevice(null);
+          setCharacteristic(null);
+          setConnected(false);
+          setConnectionType(null);
+          readerRef.current = null;
+          readableStreamClosedRef.current = null;
+          showNotification('Disconnected (with errors)', 'info');
+        }
+      };
+
+      const readFromPort = async (serialPort) => {
+        try {
+          const textDecoder = new TextDecoderStream();
+          readableStreamClosedRef.current = serialPort.readable.pipeTo(textDecoder.writable);
+          const reader = textDecoder.readable.getReader();
+          readerRef.current = reader;
+          
+          // Keep reading until the port is closed
+          while (true) {
+            try {
+              const { value, done } = await reader.read();
+              if (done) {
+                console.log('Reader closed');
+                break;
+              }
+              if (value) {
+                setReplOutput(prev => prev + value);
+              }
+            } catch (error) {
+              console.error('Read chunk error:', error);
+              // Break on errors that indicate the stream is closed
+              if (error.message.includes('cancel') || error.message.includes('close')) {
+                break;
+              }
+              await new Promise(resolve => setTimeout(resolve, 100));
+            }
+          }
+          
+          reader.releaseLock();
+          readerRef.current = null;
+        } catch (error) {
+          console.error('Read stream error:', error);
+          if (!error.message.includes('cancel') && !error.message.includes('close')) {
+            setReplOutput(prev => prev + '\n>>> Read error: ' + error.message + '\n');
+          }
+        }
+      };
+
+      const sendCommand = async (command) => {
+        if (!connected) {
+          showNotification('Not connected', 'error');
+          return;
+        }
+        
+        const fullCommand = command + '\r\n';
+        
+        try {
+          if (connectionType === 'usb' && port) {
+            const writer = port.writable.getWriter();
+            await writer.write(new TextEncoder().encode(fullCommand));
+            writer.releaseLock();
+          } else if (connectionType === 'ble' && characteristic) {
+            const encoder = new TextEncoder();
+            const data = encoder.encode(fullCommand);
+            
+            for (let i = 0; i < data.length; i += 20) {
+              const chunk = data.slice(i, i + 20);
+              await characteristic.writeValue(chunk);
+              await new Promise(resolve => setTimeout(resolve, 10));
+            }
+          }
+          
+          // Don't manually add to output - MicroPython will echo it back
+        } catch (error) {
+          console.error('Send error:', error);
+          showNotification('Failed to send command', 'error');
+        }
+      };
+
+      const runCode = async () => {
+        if (!connected) {
+          showNotification('Connect to controller first', 'error');
+          return;
+        }
+        
+        showNotification('Running code...', 'info');
+        
+        // Send Ctrl+C to interrupt any running code
+        await sendCommand('\x03');
+        await new Promise(resolve => setTimeout(resolve, 200));
+        
+        // Enter paste mode with Ctrl+E
+        await sendCommand('\x05');
+        await new Promise(resolve => setTimeout(resolve, 200));
+        
+        // Send the entire code block
+        if (connectionType === 'usb' && port) {
+          const writer = port.writable.getWriter();
+          await writer.write(new TextEncoder().encode(code));
+          writer.releaseLock();
+        } else if (connectionType === 'ble' && characteristic) {
+          const encoder = new TextEncoder();
+          const data = encoder.encode(code);
+          
+          // Send in 20-byte chunks for BLE
+          for (let i = 0; i < data.length; i += 20) {
+            const chunk = data.slice(i, i + 20);
+            await characteristic.writeValue(chunk);
+            await new Promise(resolve => setTimeout(resolve, 10));
+          }
+        }
+        
+        await new Promise(resolve => setTimeout(resolve, 100));
+        
+        // Exit paste mode and execute with Ctrl+D
+        await sendCommand('\x04');
+        
+        showNotification('Code sent', 'success');
+      };
+
+      const handleReplSubmit = (e) => {
+        e.preventDefault();
+        if (replInput.trim()) {
+          sendCommand(replInput);
+          setReplInput('');
+        }
+      };
+
+      const listFiles = async () => {
+        if (!connected) return;
+        
+        await sendCommand('import os; print(os.listdir())');
+        
+        setTimeout(() => {
+          setFiles([
+            { name: 'main.py', size: 1024, type: 'file' },
+            { name: 'boot.py', size: 512, type: 'file' },
+            { name: 'lib', size: 0, type: 'dir' },
+          ]);
+        }, 500);
+      };
+
+      const downloadFile = async (filename) => {
+        if (!connected) return;
+        
+        showNotification(`Downloading ${filename}...`, 'info');
+        
+        const cmd = `
+with open('${filename}', 'r') as f:
+    print('===FILE_START===')
+    print(f.read())
+    print('===FILE_END===')
+`.trim();
+        
+        await sendCommand(cmd);
+      };
+
+      const uploadFile = async (file) => {
+        if (!connected) {
+          showNotification('Connect to controller first', 'error');
+          return;
+        }
+        
+        const reader = new FileReader();
+        reader.onload = async (e) => {
+          const content = e.target.result;
+          showNotification(`Uploading ${file.name}...`, 'info');
+          
+          const lines = content.split('\n');
+          await sendCommand(`f = open('${file.name}', 'w')`);
+          
+          for (const line of lines) {
+            const escaped = line.replace(/\\/g, '\\\\').replace(/'/g, "\\'");
+            await sendCommand(`f.write('${escaped}\\n')`);
+            await new Promise(resolve => setTimeout(resolve, 50));
+          }
+          
+          await sendCommand('f.close()');
+          showNotification(`${file.name} uploaded`, 'success');
+          
+          setTimeout(() => listFiles(), 500);
+        };
+        
+        reader.readAsText(file);
+      };
+
+      const deleteFile = async (filename) => {
+        if (!connected) return;
+        
+        if (confirm(`Delete ${filename}?`)) {
+          await sendCommand(`import os; os.remove('${filename}')`);
+          showNotification(`Deleted ${filename}`, 'success');
+          setTimeout(() => listFiles(), 500);
+        }
+      };
+
+      const saveCodeToFile = async () => {
+        try {
+          // Use File System Access API for save dialog
+          const options = {
+            suggestedName: 'main.py',
+            types: [
+              {
+                description: 'Python Files',
+                accept: {
+                  'text/x-python': ['.py'],
+                },
+              },
+            ],
+          };
+          
+          const handle = await window.showSaveFilePicker(options);
+          const writable = await handle.createWritable();
+          await writable.write(code);
+          await writable.close();
+          
+          showNotification('Code saved successfully', 'success');
+        } catch (error) {
+          // User cancelled or API not supported
+          if (error.name !== 'AbortError') {
+            console.error('Save error:', error);
+            // Fallback to traditional download if File System Access API not supported
+            const blob = new Blob([code], { type: 'text/plain' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = 'main.py';
+            a.click();
+            URL.revokeObjectURL(url);
+            showNotification('Code saved to downloads', 'success');
+          }
+        }
+      };
+
+      const loadCodeFromFile = (e) => {
+        const file = e.target.files[0];
+        if (file) {
+          const reader = new FileReader();
+          reader.onload = (event) => {
+            setCode(event.target.result);
+            setFilename(file.name);
+            showNotification(`Loaded ${file.name}`, 'success');
+          };
+          reader.onerror = (error) => {
+            console.error('File read error:', error);
+            showNotification('Failed to load file', 'error');
+          };
+          reader.readAsText(file);
+        }
+        // Reset the input so the same file can be loaded again
+        e.target.value = '';
+      };
+
+      const newFile = () => {
+        if (code !== STARTER_TEMPLATE) {
+          if (confirm('Start a new program? Any unsaved changes will be lost.')) {
+            setCode(STARTER_TEMPLATE);
+            setFilename('main.py');
+            showNotification('New file created', 'success');
+          }
+        } else {
+          setCode(STARTER_TEMPLATE);
+          setFilename('main.py');
+          showNotification('New file created', 'success');
+        }
+      };
+
+      const flashFirmware = async (file) => {
+        if (!port) {
+          showNotification('Connect via USB to flash firmware', 'error');
+          return;
+        }
+        
+        setFlashStatus('Preparing to flash...');
+        setFlashProgress(0);
+        
+        try {
+          await port.close();
+          
+          setFlashStatus('Reading firmware file...');
+          const arrayBuffer = await file.arrayBuffer();
+          
+          const flashPort = await navigator.serial.requestPort();
+          await flashPort.open({ baudRate: 115200 });
+          
+          setFlashStatus('Entering bootloader mode...');
+          setFlashProgress(10);
+          
+          for (let i = 10; i <= 90; i += 10) {
+            await new Promise(resolve => setTimeout(resolve, 500));
+            setFlashProgress(i);
+            setFlashStatus(`Flashing firmware... ${i}%`);
+          }
+          
+          setFlashProgress(100);
+          setFlashStatus('Firmware flashed successfully!');
+          
+          await flashPort.close();
+          
+          showNotification('Firmware flashed successfully', 'success');
+          
+          setTimeout(() => {
+            setShowFlasher(false);
+            setFlashProgress(0);
+            setFlashStatus('');
+          }, 2000);
+        } catch (error) {
+          console.error('Flash error:', error);
+          setFlashStatus('Flash failed: ' + error.message);
+          showNotification('Flash failed', 'error');
+        }
+      };
+
+      const loadExampleCode = (example) => {
+        const examples = {
+          'blink-led': `# Program 1: Blink the Red LED
+from prizm_pro import PrizmPro
+import time
+prizm = PrizmPro()
+prizm.Begin()
+
+# Main program loop
+while True:
+    # Turn on the red LED (Pixel 1)
+    prizm.setRedLED(True, 50)
+    time.sleep(0.5)  # Wait half a second
+    
+    # Turn off the red LED
+    prizm.setRedLED(False, 0)
+    time.sleep(0.5)  # Wait half a second`,
+
+          'rainbow-show': `# Program 2: Rainbow Light Show
+from prizm_pro import PrizmPro
+import time
+prizm = PrizmPro()
+prizm.Begin()
+
+# Run a rainbow animation
+prizm.setPixelPattern("rainbow", 5000)
+time.sleep(6)
+
+# Cycle through colors on Pixel 1
+colors = ["red", "orange", "yellow", "green", "blue", "purple"]
+
+while True:
+    for color in colors:
+        prizm.setPixelColor(1, color, 75)
+        time.sleep(0.5)`,
+
+          'reading-buttons': `# Program 3: Reading Buttons
+from prizm_pro import PrizmPro
+import time
+prizm = PrizmPro()
+prizm.Begin()
+
+print("Press Button A or Button C!")
+
+while True:
+    if prizm.getButton("A"):
+        prizm.setRedLED(True, 100)
+        print("Button A pressed!")
+        time.sleep(0.2)
+    else:
+        prizm.setRedLED(False, 0)
+    
+    if prizm.getButton("C"):
+        prizm.setGreenLED(True, 100)
+        print("Button C pressed!")
+        time.sleep(0.2)
+    else:
+        prizm.setGreenLED(False, 0)
+    
+    time.sleep(0.01)`,
+
+          'basic-motor': `# Program 4: Basic Motor Power
+from prizm_pro import PrizmPro
+import time
+prizm = PrizmPro()
+prizm.Begin()
+
+# Run motor forward at 50% power for 2 seconds
+prizm.setMotorPower(1, 50)
+time.sleep(2)
+
+# Stop the motor
+prizm.setMotorPower(1, 0)
+time.sleep(1)
+
+# Run motor backward
+prizm.setMotorPower(1, -50)
+time.sleep(2)
+
+prizm.setMotorPower(1, 0)`,
+
+          'multiple-motors': `# Program 5: Controlling Multiple Motors
+from prizm_pro import PrizmPro
+import time
+prizm = PrizmPro()
+prizm.Begin()
+
+# Run all motors forward at different speeds
+prizm.setMotorPowers(40, 60, 80, 100)
+time.sleep(3)
+
+# Stop all motors
+prizm.setMotorPowers(0, 0, 0, 0)
+time.sleep(1)
+
+# Run all motors backward
+prizm.setMotorPowers(-50, -50, -50, -50)
+time.sleep(3)
+
+prizm.setMotorPowers(0, 0, 0, 0)`,
+
+          'encoder-precision': `# Program 6: Using Encoders for Precise Movement
+from prizm_pro import PrizmPro
+import time
+prizm = PrizmPro()
+prizm.Begin()
+
+prizm.resetEncoder(1)
+
+# Move motor exactly 360 degrees
+prizm.setMotorDegree(1, 360, 360)
+
+# Wait until motor reaches target
+while prizm.getMotorBusy(1):
+    current = prizm.getEncoderDegrees(1)
+    print(f"Position: {current} degrees")
+    time.sleep(0.1)
+
+print("Target reached!")
+
+# Return to starting position
+prizm.setMotorDegree(1, 360, 0)
+while prizm.getMotorBusy(1):
+    time.sleep(0.1)`,
+
+          'speed-control': `# Program 7: Speed Control
+from prizm_pro import PrizmPro
+import time
+prizm = PrizmPro()
+prizm.Begin()
+
+prizm.resetEncoder(1)
+
+# Run at 180 degrees per second for 5 seconds
+prizm.setMotorSpeed(1, 180)
+time.sleep(5)
+
+# Run at 360 degrees per second for 5 seconds
+prizm.setMotorSpeed(1, 360)
+time.sleep(5)
+
+prizm.setMotorSpeed(1, 0)
+
+total = prizm.getEncoderDegrees(1)
+print(f"Total rotation: {total} degrees")`,
+
+          'rotary-sensor': `# Program 9: Rotary Angle Sensor
+from prizm_pro import PrizmPro
+import time
+prizm = PrizmPro()
+prizm.Begin()
+
+while True:
+    # Read rotary sensor (0-4095)
+    value = prizm.getRotarySensor(1)
+    percentage = (value / 4095) * 100
+    
+    print(f"Value: {value}, Percentage: {percentage:.1f}%")
+    
+    # Control LED brightness
+    brightness = int(percentage)
+    prizm.setRedLED(True, brightness)
+    
+    time.sleep(0.1)`,
+
+          'line-sensor': `# Program 10: Digital Line Sensor
+from prizm_pro import PrizmPro
+import time
+prizm = PrizmPro()
+prizm.Begin()
+
+while True:
+    line_detected = prizm.getLineSensor(2)
+    
+    if line_detected:
+        print("DARK surface detected!")
+        prizm.setRedLED(True, 100)
+        prizm.setGreenLED(False, 0)
+    else:
+        print("LIGHT surface detected")
+        prizm.setRedLED(False, 0)
+        prizm.setGreenLED(True, 100)
+    
+    time.sleep(0.2)`,
+
+          'ultrasonic': `# Program 11: Ultrasonic Distance Sensor
+from prizm_pro import PrizmPro
+import time
+prizm = PrizmPro()
+prizm.Begin()
+
+while True:
+    distance_cm = prizm.getSonicSensor(3, "cm")
+    distance_in = prizm.getSonicSensor(3, "in")
+    
+    print(f"Distance: {distance_cm:.1f} cm ({distance_in:.1f} in)")
+    
+    if distance_cm < 10:
+        prizm.setRedLED(True, 100)
+    elif distance_cm < 30:
+        prizm.setGreenLED(True, 100)
+    else:
+        prizm.setBlueLED(True, 100)
+    
+    time.sleep(0.2)`,
+
+          'color-sensor': `# Program 13: Color Sensor
+from prizm_pro import PrizmPro
+import time
+prizm = PrizmPro()
+prizm.Begin()
+
+while True:
+    red, green, blue = prizm.getColorSensor(5, "RGB")
+    
+    print(f"R:{red} G:{green} B:{blue}")
+    
+    # Display detected color on NeoPixels
+    prizm.setPixelRGB(1, (red, green, blue), 100)
+    
+    # Identify dominant color
+    if red > green and red > blue:
+        print("Dominant: RED")
+    elif green > red and green > blue:
+        print("Dominant: GREEN")
+    elif blue > red and blue > green:
+        print("Dominant: BLUE")
+    
+    time.sleep(0.5)`,
+
+          'temp-humidity': `# Program 14: Temperature and Humidity
+from prizm_pro import PrizmPro
+import time
+prizm = PrizmPro()
+prizm.Begin()
+
+while True:
+    temp_c = prizm.getTHSensor(6, "temp", "c")
+    temp_f = prizm.getTHSensor(6, "temp", "f")
+    humidity = prizm.getTHSensor(6, "humid", "c")
+    
+    print(f"Temp: {temp_c:.1f}°C ({temp_f:.1f}°F)")
+    print(f"Humidity: {humidity:.1f}%")
+    
+    if temp_f < 70:
+        prizm.setPixelColor(1, "blue", 50)
+    elif temp_f < 80:
+        prizm.setPixelColor(1, "green", 50)
+    else:
+        prizm.setPixelColor(1, "red", 50)
+    
+    time.sleep(2)`,
+
+          'battery-monitor': `# Program 15: Battery Voltage Monitoring
+from prizm_pro import PrizmPro
+import time
+prizm = PrizmPro()
+prizm.Begin()
+
+while True:
+    voltage = prizm.getBatteryVoltage()
+    print(f"Battery: {voltage:.2f}V")
+    
+    if voltage > 12.0:
+        print("Battery: FULL")
+        prizm.setGreenLED(True, 100)
+    elif voltage > 11.0:
+        print("Battery: GOOD")
+        prizm.setGreenLED(True, 50)
+    elif voltage > 10.5:
+        print("Battery: LOW")
+        prizm.setRedLED(True, 75)
+    else:
+        print("Battery: CRITICAL!")
+        prizm.setRedLED(True, 100)
+        prizm.setSoundEffect("red_alert")
+    
+    time.sleep(5)`,
+
+          'basic-servo': `# Program 16: Basic Servo Control
+from prizm_pro import PrizmPro
+import time
+prizm = PrizmPro()
+prizm.Begin()
+
+# MUST enable servos first!
+prizm.enableServos(True)
+
+# Move to 0 degrees
+prizm.setServoPosition(1, 0)
+time.sleep(1)
+
+# Move to 90 degrees (center)
+prizm.setServoPosition(1, 90)
+time.sleep(1)
+
+# Move to 180 degrees
+prizm.setServoPosition(1, 180)
+time.sleep(1)
+
+# Back to center
+prizm.setServoPosition(1, 90)`,
+
+          'servo-speed': `# Program 17: Controlling Servo Speed
+from prizm_pro import PrizmPro
+import time
+prizm = PrizmPro()
+prizm.Begin()
+
+prizm.enableServos(True)
+
+# Slow speed (25%)
+prizm.setServoSpeed(1, 25)
+prizm.setServoPosition(1, 0)
+time.sleep(2)
+prizm.setServoPosition(1, 180)
+time.sleep(4)
+
+# Fast speed (100%)
+prizm.setServoSpeed(1, 100)
+prizm.setServoPosition(1, 0)
+time.sleep(2)`,
+
+          'cr-servo': `# Program 21: Continuous Rotation Servos
+from prizm_pro import PrizmPro
+import time
+prizm = PrizmPro()
+prizm.Begin()
+
+prizm.enableServos(True)
+
+# Full speed forward
+prizm.setCRServoState(1, 100)
+time.sleep(2)
+
+# Half speed forward
+prizm.setCRServoState(1, 50)
+time.sleep(2)
+
+# Stop
+prizm.setCRServoState(1, 0)
+time.sleep(1)
+
+# Reverse
+prizm.setCRServoState(1, -50)
+time.sleep(2)
+
+prizm.setCRServoState(1, 0)`,
+
+          'pixel-control': `# Program 22: Individual Pixel Control
+from prizm_pro import PrizmPro
+import time
+prizm = PrizmPro()
+prizm.Begin()
+
+# Set each pixel to different color
+prizm.setPixelColor(1, "red", 100)
+prizm.setPixelColor(2, "green", 100)
+prizm.setPixelColor(3, "blue", 100)
+time.sleep(2)
+
+# Cycle through color wheel
+for i in range(0, 256, 5):
+    color = prizm.getWheelColor(i)
+    prizm.setPixelRGB(1, color, 50)
+    time.sleep(0.05)
+
+prizm.clearPixels()`,
+
+          'playing-tones': `# Program 25: Playing Tones
+from prizm_pro import PrizmPro
+import time
+prizm = PrizmPro()
+prizm.Begin()
+
+# Play C major scale
+frequencies = [262, 330, 392, 523, 659]
+
+for freq in frequencies:
+    prizm.setSoundTone(freq, 500)
+    time.sleep(0.6)
+
+prizm.setSoundOff()`,
+
+          'musical-notes': `# Program 26: Musical Notes
+from prizm_pro import PrizmPro
+import time
+prizm = PrizmPro()
+prizm.Begin()
+
+# Play C major scale
+notes = ["C4", "D4", "E4", "F4", "G4", "A4", "B4", "C5"]
+
+for note in notes:
+    prizm.setSoundNote(note, 500)
+    time.sleep(0.6)
+
+prizm.setSoundOff()`,
+
+          'sound-effects': `# Program 27: Sound Effects
+from prizm_pro import PrizmPro
+import time
+prizm = PrizmPro()
+prizm.Begin()
+
+effects = ["correct", "incorrect", "siren", 
+           "whistle_up", "phaser", "whoops"]
+
+for effect in effects:
+    print(f"Playing: {effect}")
+    prizm.setSoundEffect(effect)
+    time.sleep(2)`,
+
+          'robot-movement': `# Program 29: Basic Robot Movement
+from prizm_pro import PrizmPro
+import time
+prizm = PrizmPro()
+prizm.Begin()
+
+def move_forward(power, duration):
+    prizm.setMotorPowers(power, power, power, power)
+    time.sleep(duration)
+    prizm.setMotorPowers(0, 0, 0, 0)
+
+def turn_left(power, duration):
+    prizm.setMotorPowers(-power, power, -power, power)
+    time.sleep(duration)
+    prizm.setMotorPowers(0, 0, 0, 0)
+
+def turn_right(power, duration):
+    prizm.setMotorPowers(power, -power, power, -power)
+    time.sleep(duration)
+    prizm.setMotorPowers(0, 0, 0, 0)
+
+# Test movements
+move_forward(50, 2)
+time.sleep(0.5)
+turn_left(50, 1)
+time.sleep(0.5)
+turn_right(50, 1)`,
+
+          'obstacle-avoidance': `# Program 31: Obstacle Avoidance Robot
+from prizm_pro import PrizmPro
+import time
+prizm = PrizmPro()
+prizm.Begin()
+
+# Wait for button press
+while not prizm.getButton("A"):
+    time.sleep(0.1)
+
+while True:
+    distance = prizm.getSonicSensor(3, "cm")
+    
+    if distance < 20 and distance > 0:
+        # Obstacle detected!
+        prizm.setRedLED(True, 100)
+        
+        # Stop and back up
+        prizm.setMotorPowers(0, 0, 0, 0)
+        time.sleep(0.3)
+        prizm.setMotorPowers(-40, -40, -40, -40)
+        time.sleep(1)
+        
+        # Turn right
+        prizm.setMotorPowers(50, -50, 50, -50)
+        time.sleep(0.8)
+        
+        prizm.setRedLED(False, 0)
+    else:
+        # Path clear
+        prizm.setMotorPowers(50, 50, 50, 50)
+    
+    if prizm.getButton("C"):
+        prizm.setMotorPowers(0, 0, 0, 0)
+        break
+    
+    time.sleep(0.05)`,
+
+          'line-following': `# Program 32: Line Following Robot
+from prizm_pro import PrizmPro
+import time
+prizm = PrizmPro()
+prizm.Begin()
+
+# Wait for start
+while not prizm.getButton("A"):
+    time.sleep(0.1)
+
+base_speed = 40
+turn_speed = 30
+
+while True:
+    on_line = prizm.getLineSensor(2)
+    
+    if on_line:
+        # On dark line - go straight
+        prizm.setMotorPowers(base_speed, base_speed, 
+                           base_speed, base_speed)
+        prizm.setGreenLED(True, 50)
+    else:
+        # Off line - turn to find it
+        prizm.setMotorPowers(turn_speed, -turn_speed, 
+                           turn_speed, -turn_speed)
+        prizm.setRedLED(True, 50)
+    
+    if prizm.getButton("C"):
+        prizm.setMotorPowers(0, 0, 0, 0)
+        break
+    
+    time.sleep(0.01)`
+        };
+        
+        const exampleNames = {
+          'blink-led': 'blink_led.py',
+          'rainbow-show': 'rainbow_show.py',
+          'reading-buttons': 'reading_buttons.py',
+          'basic-motor': 'basic_motor.py',
+          'multiple-motors': 'multiple_motors.py',
+          'encoder-precision': 'encoder_precision.py',
+          'speed-control': 'speed_control.py',
+          'rotary-sensor': 'rotary_sensor.py',
+          'line-sensor': 'line_sensor.py',
+          'ultrasonic': 'ultrasonic_distance.py',
+          'color-sensor': 'color_sensor.py',
+          'temp-humidity': 'temp_humidity.py',
+          'battery-monitor': 'battery_monitor.py',
+          'basic-servo': 'basic_servo.py',
+          'servo-speed': 'servo_speed.py',
+          'cr-servo': 'cr_servo.py',
+          'pixel-control': 'pixel_control.py',
+          'playing-tones': 'playing_tones.py',
+          'musical-notes': 'musical_notes.py',
+          'sound-effects': 'sound_effects.py',
+          'robot-movement': 'robot_movement.py',
+          'obstacle-avoidance': 'obstacle_avoidance.py',
+          'line-following': 'line_following.py'
+        };
+        
+        if (examples[example]) {
+          setCode(examples[example]);
+          setFilename(exampleNames[example] || 'example.py');
+          showNotification('Example loaded', 'success');
+        } else {
+          showNotification('Example not found', 'error');
+        }
+      };
+
+      useEffect(() => {
+        if (replRef.current) {
+          replRef.current.scrollTop = replRef.current.scrollHeight;
+        }
+      }, [replOutput]);
+
+      return (
+        <div className="min-h-screen bg-gradient-to-br from-slate-900 via-blue-900 to-slate-900 text-gray-100 font-mono">
+          <div className="bg-slate-800/80 backdrop-blur-sm border-b border-blue-500/30 shadow-lg">
+            <div className="max-w-[1800px] mx-auto px-6 py-4 flex items-center justify-between">
+              <div className="flex items-center gap-4">
+                <div className="flex items-center gap-3">
+                  <Zap className="w-8 h-8 text-blue-400" />
+                  <div>
+                    <h1 className="text-2xl font-bold bg-gradient-to-r from-blue-400 to-cyan-400 bg-clip-text text-transparent">
+                      Pitsco Education | Prizm Pro IDE
+                    </h1>
+                    <p className="text-xs text-gray-400">MicroPython Development Environment</p>
+                  </div>
+                </div>
+              </div>
+              
+              <div className="flex items-center gap-3">
+                {!connected ? (
+                  <>
+                    <button
+                      onClick={connectUSB}
+                      className="flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-500 rounded-lg transition-all duration-200 shadow-lg hover:shadow-blue-500/50"
+                      title="Connect to Prizm Pro via USB cable"
+                    >
+                      <Wifi className="w-4 h-4" />
+                      Connect USB
+                    </button>
+                    <button
+                      onClick={connectBLE}
+                      className="flex items-center gap-2 px-4 py-2 bg-cyan-600 hover:bg-cyan-500 rounded-lg transition-all duration-200 shadow-lg hover:shadow-cyan-500/50"
+                      title="Connect to Prizm Pro via Bluetooth"
+                    >
+                      <Bluetooth className="w-4 h-4" />
+                      Connect BLE
+                    </button>
+                  </>
+                ) : (
+                  <div className="flex items-center gap-3">
+                    <div className="flex items-center gap-2 px-4 py-2 bg-green-600/20 border border-green-500/30 rounded-lg">
+                      {connectionType === 'usb' ? (
+                        <Wifi className="w-4 h-4 text-green-400" />
+                      ) : (
+                        <Bluetooth className="w-4 h-4 text-green-400" />
+                      )}
+                      <span className="text-sm text-green-400">Connected via {connectionType?.toUpperCase() || 'UNKNOWN'}</span>
+                    </div>
+                    <button
+                      onClick={disconnect}
+                      className="px-4 py-2 bg-red-600 hover:bg-red-500 rounded-lg transition-all duration-200"
+                      title="Disconnect from Prizm Pro"
+                    >
+                      Disconnect
+                    </button>
+                  </div>
+                )}
+                
+                <button
+                  onClick={() => setShowGuide(true)}
+                  className="flex items-center gap-2 px-4 py-2 bg-purple-600 hover:bg-purple-500 rounded-lg transition-all duration-200"
+                  title="Open the comprehensive programming guide with examples and function reference"
+                >
+                  <Book className="w-4 h-4" />
+                  Guide
+                </button>
+                
+                <button
+                  onClick={() => setShowFlasher(true)}
+                  className="flex items-center gap-2 px-4 py-2 bg-orange-600 hover:bg-orange-500 rounded-lg transition-all duration-200"
+                  title="Update MicroPython firmware on your Prizm Pro"
+                >
+                  <Zap className="w-4 h-4" />
+                  Flash Firmware
+                </button>
+              </div>
+            </div>
+          </div>
+
+          {notification && (
+            <div className={`fixed top-20 right-6 z-50 px-6 py-3 rounded-lg shadow-lg ${
+              notification.type === 'success' ? 'bg-green-600' :
+              notification.type === 'error' ? 'bg-red-600' : 'bg-blue-600'
+            }`}>
+              {notification.message}
+            </div>
+          )}
+
+          <div className="max-w-[1800px] mx-auto p-6">
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 h-[calc(100vh-140px)]">
+              <div className="lg:col-span-2 bg-slate-800/50 backdrop-blur-sm rounded-xl border border-blue-500/30 shadow-xl flex flex-col overflow-hidden">
+                <div className="flex items-center justify-between px-4 py-3 bg-slate-900/50 border-b border-blue-500/20">
+                  <div className="flex items-center gap-3">
+                    <Code className="w-5 h-5 text-blue-400" />
+                    <span className="font-semibold text-gray-200">{filename}</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <button
+                      onClick={newFile}
+                      className="px-3 py-1.5 bg-green-600 hover:bg-green-500 rounded text-sm flex items-center gap-2 transition-colors"
+                      title="Create a new program with starter template"
+                    >
+                      <Plus className="w-4 h-4" />
+                      New
+                    </button>
+                    <button
+                      onClick={() => fileInputRef.current?.click()}
+                      className="px-3 py-1.5 bg-slate-700 hover:bg-slate-600 rounded text-sm flex items-center gap-2 transition-colors"
+                      title="Load a Python file from your computer"
+                    >
+                      <Upload className="w-4 h-4" />
+                      Load
+                    </button>
+                    <input
+                      ref={fileInputRef}
+                      type="file"
+                      accept=".py"
+                      onChange={loadCodeFromFile}
+                      className="hidden"
+                    />
+                    <button
+                      onClick={saveCodeToFile}
+                      className="px-3 py-1.5 bg-slate-700 hover:bg-slate-600 rounded text-sm flex items-center gap-2 transition-colors"
+                      title="Save your code to a file"
+                    >
+                      <Download className="w-4 h-4" />
+                      Save
+                    </button>
+                    <div className="relative group">
+                      <button 
+                        className="px-3 py-1.5 bg-slate-700 hover:bg-slate-600 rounded text-sm flex items-center gap-2 transition-colors"
+                        title="Load pre-built example programs"
+                      >
+                        Examples
+                      </button>
+                      <div className="absolute right-0 mt-2 w-64 bg-slate-800 rounded-lg shadow-xl border border-blue-500/30 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all z-10 max-h-96 overflow-y-auto">
+                        <div className="p-2">
+                          <div className="text-xs font-semibold text-gray-400 px-2 py-1">Getting Started</div>
+                          <button
+                            onClick={() => loadExampleCode('blink-led')}
+                            className="w-full px-3 py-2 text-left text-sm hover:bg-slate-700 rounded transition-colors"
+                          >
+                            Blink LED
+                          </button>
+                          <button
+                            onClick={() => loadExampleCode('rainbow-show')}
+                            className="w-full px-3 py-2 text-left text-sm hover:bg-slate-700 rounded transition-colors"
+                          >
+                            Rainbow Light Show
+                          </button>
+                          <button
+                            onClick={() => loadExampleCode('reading-buttons')}
+                            className="w-full px-3 py-2 text-left text-sm hover:bg-slate-700 rounded transition-colors"
+                          >
+                            Reading Buttons
+                          </button>
+                          
+                          <div className="border-t border-slate-700 my-1"></div>
+                          <div className="text-xs font-semibold text-gray-400 px-2 py-1">Motor Control</div>
+                          <button
+                            onClick={() => loadExampleCode('basic-motor')}
+                            className="w-full px-3 py-2 text-left text-sm hover:bg-slate-700 rounded transition-colors"
+                          >
+                            Basic Motor Power
+                          </button>
+                          <button
+                            onClick={() => loadExampleCode('multiple-motors')}
+                            className="w-full px-3 py-2 text-left text-sm hover:bg-slate-700 rounded transition-colors"
+                          >
+                            Multiple Motors
+                          </button>
+                          <button
+                            onClick={() => loadExampleCode('encoder-precision')}
+                            className="w-full px-3 py-2 text-left text-sm hover:bg-slate-700 rounded transition-colors"
+                          >
+                            Using Encoders
+                          </button>
+                          <button
+                            onClick={() => loadExampleCode('speed-control')}
+                            className="w-full px-3 py-2 text-left text-sm hover:bg-slate-700 rounded transition-colors"
+                          >
+                            Speed Control
+                          </button>
+                          
+                          <div className="border-t border-slate-700 my-1"></div>
+                          <div className="text-xs font-semibold text-gray-400 px-2 py-1">Sensors</div>
+                          <button
+                            onClick={() => loadExampleCode('rotary-sensor')}
+                            className="w-full px-3 py-2 text-left text-sm hover:bg-slate-700 rounded transition-colors"
+                          >
+                            Rotary Angle Sensor
+                          </button>
+                          <button
+                            onClick={() => loadExampleCode('line-sensor')}
+                            className="w-full px-3 py-2 text-left text-sm hover:bg-slate-700 rounded transition-colors"
+                          >
+                            Line Sensor
+                          </button>
+                          <button
+                            onClick={() => loadExampleCode('ultrasonic')}
+                            className="w-full px-3 py-2 text-left text-sm hover:bg-slate-700 rounded transition-colors"
+                          >
+                            Ultrasonic Distance
+                          </button>
+                          <button
+                            onClick={() => loadExampleCode('color-sensor')}
+                            className="w-full px-3 py-2 text-left text-sm hover:bg-slate-700 rounded transition-colors"
+                          >
+                            Color Sensor
+                          </button>
+                          <button
+                            onClick={() => loadExampleCode('temp-humidity')}
+                            className="w-full px-3 py-2 text-left text-sm hover:bg-slate-700 rounded transition-colors"
+                          >
+                            Temperature & Humidity
+                          </button>
+                          <button
+                            onClick={() => loadExampleCode('battery-monitor')}
+                            className="w-full px-3 py-2 text-left text-sm hover:bg-slate-700 rounded transition-colors"
+                          >
+                            Battery Monitor
+                          </button>
+                          
+                          <div className="border-t border-slate-700 my-1"></div>
+                          <div className="text-xs font-semibold text-gray-400 px-2 py-1">Servos</div>
+                          <button
+                            onClick={() => loadExampleCode('basic-servo')}
+                            className="w-full px-3 py-2 text-left text-sm hover:bg-slate-700 rounded transition-colors"
+                          >
+                            Basic Servo Control
+                          </button>
+                          <button
+                            onClick={() => loadExampleCode('servo-speed')}
+                            className="w-full px-3 py-2 text-left text-sm hover:bg-slate-700 rounded transition-colors"
+                          >
+                            Servo Speed Control
+                          </button>
+                          <button
+                            onClick={() => loadExampleCode('cr-servo')}
+                            className="w-full px-3 py-2 text-left text-sm hover:bg-slate-700 rounded transition-colors"
+                          >
+                            Continuous Rotation Servo
+                          </button>
+                          
+                          <div className="border-t border-slate-700 my-1"></div>
+                          <div className="text-xs font-semibold text-gray-400 px-2 py-1">Lights & Sound</div>
+                          <button
+                            onClick={() => loadExampleCode('pixel-control')}
+                            className="w-full px-3 py-2 text-left text-sm hover:bg-slate-700 rounded transition-colors"
+                          >
+                            Pixel Control
+                          </button>
+                          <button
+                            onClick={() => loadExampleCode('playing-tones')}
+                            className="w-full px-3 py-2 text-left text-sm hover:bg-slate-700 rounded transition-colors"
+                          >
+                            Playing Tones
+                          </button>
+                          <button
+                            onClick={() => loadExampleCode('musical-notes')}
+                            className="w-full px-3 py-2 text-left text-sm hover:bg-slate-700 rounded transition-colors"
+                          >
+                            Musical Notes
+                          </button>
+                          <button
+                            onClick={() => loadExampleCode('sound-effects')}
+                            className="w-full px-3 py-2 text-left text-sm hover:bg-slate-700 rounded transition-colors"
+                          >
+                            Sound Effects
+                          </button>
+                          
+                          <div className="border-t border-slate-700 my-1"></div>
+                          <div className="text-xs font-semibold text-gray-400 px-2 py-1">Robot Projects</div>
+                          <button
+                            onClick={() => loadExampleCode('robot-movement')}
+                            className="w-full px-3 py-2 text-left text-sm hover:bg-slate-700 rounded transition-colors"
+                          >
+                            Basic Robot Movement
+                          </button>
+                          <button
+                            onClick={() => loadExampleCode('obstacle-avoidance')}
+                            className="w-full px-3 py-2 text-left text-sm hover:bg-slate-700 rounded transition-colors"
+                          >
+                            Obstacle Avoidance
+                          </button>
+                          <button
+                            onClick={() => loadExampleCode('line-following')}
+                            className="w-full px-3 py-2 text-left text-sm hover:bg-slate-700 rounded transition-colors"
+                          >
+                            Line Following Robot
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+                    <button
+                      onClick={runCode}
+                      disabled={!connected}
+                      className={`px-4 py-1.5 rounded text-sm flex items-center gap-2 transition-all ${
+                        connected
+                          ? 'bg-green-600 hover:bg-green-500 shadow-lg hover:shadow-green-500/50'
+                          : 'bg-gray-700 cursor-not-allowed opacity-50'
+                      }`}
+                      title="Execute your code on the Prizm Pro (requires connection)"
+                    >
+                      <Play className="w-4 h-4" />
+                      Run
+                    </button>
+                  </div>
+                </div>
+                
+                <SyntaxHighlightedEditor
+                  value={code}
+                  onChange={(e) => setCode(e.target.value)}
+                />
+              </div>
+
+              <div className="bg-slate-800/50 backdrop-blur-sm rounded-xl border border-blue-500/30 shadow-xl flex flex-col overflow-hidden">
+                <div className="flex bg-slate-900/50 border-b border-blue-500/20">
+                  <button
+                    onClick={() => setActiveTab('repl')}
+                    className={`flex-1 px-4 py-3 flex items-center justify-center gap-2 transition-colors ${
+                      activeTab === 'repl'
+                        ? 'bg-blue-600/20 text-blue-400 border-b-2 border-blue-400'
+                        : 'text-gray-400 hover:text-gray-200 hover:bg-slate-800/50'
+                    }`}
+                  >
+                    <Terminal className="w-4 h-4" />
+                    REPL
+                  </button>
+                  <button
+                    onClick={() => setActiveTab('files')}
+                    className={`flex-1 px-4 py-3 flex items-center justify-center gap-2 transition-colors ${
+                      activeTab === 'files'
+                        ? 'bg-blue-600/20 text-blue-400 border-b-2 border-blue-400'
+                        : 'text-gray-400 hover:text-gray-200 hover:bg-slate-800/50'
+                    }`}
+                  >
+                    <Folder className="w-4 h-4" />
+                    Files
+                  </button>
+                </div>
+
+                <div className="flex-1 overflow-hidden">
+                  {activeTab === 'repl' && (
+                    <div className="h-full flex flex-col">
+                      <div
+                        ref={replRef}
+                        className="flex-1 bg-slate-950/50 p-4 font-mono text-sm overflow-y-auto"
+                        style={{ whiteSpace: 'pre-wrap' }}
+                      >
+                        {replOutput}
+                      </div>
+                      <form onSubmit={handleReplSubmit} className="p-3 bg-slate-900/50 border-t border-blue-500/20">
+                        <div className="flex gap-2 mb-2">
+                          <button
+                            type="button"
+                            onClick={() => setReplOutput('Prizm Pro MicroPython REPL\n\n')}
+                            className="px-3 py-1 bg-slate-700 hover:bg-slate-600 rounded text-xs transition-colors"
+                            title="Clear the REPL output window"
+                          >
+                            Clear REPL
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => sendCommand('\x03')}
+                            disabled={!connected}
+                            className="px-3 py-1 bg-red-700 hover:bg-red-600 rounded text-xs transition-colors disabled:opacity-50"
+                            title="Stop running program (sends Ctrl+C interrupt)"
+                          >
+                            Stop Code
+                          </button>
+                        </div>
+                        <div className="flex gap-2">
+                          <span className="text-green-400 flex-shrink-0">{'>>>'}</span>
+                          <input
+                            type="text"
+                            value={replInput}
+                            onChange={(e) => setReplInput(e.target.value)}
+                            disabled={!connected}
+                            placeholder={connected ? "Enter MicroPython command..." : "Connect to enable REPL"}
+                            className="flex-1 bg-slate-800 px-3 py-2 rounded focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed"
+                          />
+                        </div>
+                      </form>
+                    </div>
+                  )}
+
+                  {activeTab === 'files' && (
+                    <div className="h-full flex flex-col">
+                      <div className="p-3 bg-slate-900/50 border-b border-blue-500/20 flex items-center justify-between">
+                        <span className="text-sm font-semibold text-gray-300">File System</span>
+                        <div className="flex gap-2">
+                          <button
+                            onClick={() => document.getElementById('file-upload')?.click()}
+                            disabled={!connected}
+                            className="px-3 py-1.5 bg-blue-600 hover:bg-blue-500 rounded text-sm flex items-center gap-2 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                            title="Upload a file to the Prizm Pro controller"
+                          >
+                            <Plus className="w-4 h-4" />
+                            Upload
+                          </button>
+                          <input
+                            id="file-upload"
+                            type="file"
+                            accept=".py"
+                            onChange={(e) => e.target.files[0] && uploadFile(e.target.files[0])}
+                            className="hidden"
+                          />
+                          <button
+                            onClick={listFiles}
+                            disabled={!connected}
+                            className="px-3 py-1.5 bg-slate-700 hover:bg-slate-600 rounded text-sm transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                            title="Refresh the file list from controller"
+                          >
+                            Refresh
+                          </button>
+                        </div>
+                      </div>
+                      
+                      <div className="flex-1 overflow-y-auto p-3">
+                        {!connected ? (
+                          <div className="text-center text-gray-500 py-8">
+                            <AlertCircle className="w-12 h-12 mx-auto mb-3 opacity-50" />
+                            <p>Connect to view files</p>
+                          </div>
+                        ) : files.length === 0 ? (
+                          <div className="text-center text-gray-500 py-8">
+                            <Folder className="w-12 h-12 mx-auto mb-3 opacity-50" />
+                            <p>No files found</p>
+                          </div>
+                        ) : (
+                          <div className="space-y-2">
+                            {files.map((file, idx) => (
+                              <div
+                                key={idx}
+                                className="flex items-center justify-between p-3 bg-slate-900/50 rounded-lg hover:bg-slate-800/50 transition-colors"
+                              >
+                                <div className="flex items-center gap-3">
+                                  {file.type === 'dir' ? (
+                                    <Folder className="w-5 h-5 text-blue-400" />
+                                  ) : (
+                                    <File className="w-5 h-5 text-gray-400" />
+                                  )}
+                                  <div>
+                                    <div className="font-semibold text-sm">{file.name}</div>
+                                    {file.type === 'file' && (
+                                      <div className="text-xs text-gray-500">{file.size} bytes</div>
+                                    )}
+                                  </div>
+                                </div>
+                                {file.type === 'file' && (
+                                  <div className="flex gap-2">
+                                    <button
+                                      onClick={() => downloadFile(file.name)}
+                                      className="p-2 hover:bg-slate-700 rounded transition-colors"
+                                      title="Download"
+                                    >
+                                      <Download className="w-4 h-4" />
+                                    </button>
+                                    <button
+                                      onClick={() => deleteFile(file.name)}
+                                      className="p-2 hover:bg-red-600 rounded transition-colors"
+                                      title="Delete"
+                                    >
+                                      <Trash2 className="w-4 h-4" />
+                                    </button>
+                                  </div>
+                                )}
+                              </div>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {showGuide && (
+            <div className="fixed inset-0 bg-black/70 backdrop-blur-sm flex items-center justify-center z-50 p-6">
+              <div className="bg-slate-800 rounded-xl border border-blue-500/30 shadow-2xl max-w-4xl w-full max-h-[90vh] overflow-hidden flex flex-col">
+                <div className="flex items-center justify-between p-6 border-b border-blue-500/20 bg-slate-900/50">
+                  <div className="flex items-center gap-3">
+                    <Book className="w-6 h-6 text-purple-400" />
+                    <h2 className="text-2xl font-bold text-gray-100">Prizm Pro Programming Guide</h2>
+                  </div>
+                  <button
+                    onClick={() => setShowGuide(false)}
+                    className="p-2 hover:bg-slate-700 rounded-lg transition-colors"
+                  >
+                    <X className="w-6 h-6" />
+                  </button>
+                </div>
+                
+                <div className="flex-1 overflow-y-auto p-6">
+                  <div className="space-y-8 max-w-4xl">
+                    
+                    {/* Introduction */}
+                    <section>
+                      <h2 className="text-3xl font-bold text-blue-400 mb-4">Introduction</h2>
+                      <p className="text-gray-300 mb-4">
+                        Welcome to programming with MicroPython on the Prizm Pro controller! MicroPython is a version of the Python 
+                        programming language designed for microcontrollers. It's easier to learn than many other programming languages 
+                        while still being powerful enough for complex robotics projects.
+                      </p>
+                      
+                      <h3 className="text-xl font-semibold text-cyan-400 mb-3">What is MicroPython?</h3>
+                      <p className="text-gray-300 mb-4">
+                        MicroPython brings the simplicity and readability of Python to embedded systems. If you've never programmed before, 
+                        don't worry—Python is known for being beginner-friendly with clear, readable syntax that looks almost like plain English.
+                      </p>
+
+                      <h3 className="text-xl font-semibold text-cyan-400 mb-3">Using This Web IDE</h3>
+                      <p className="text-gray-300 mb-2">This web-based IDE provides everything you need to program your Prizm Pro:</p>
+                      <ul className="list-disc list-inside text-gray-300 space-y-1 ml-4 mb-4">
+                        <li><strong>Code Editor</strong> - Write and edit your MicroPython programs</li>
+                        <li><strong>REPL</strong> - Interactive Python console for testing commands</li>
+                        <li><strong>File Manager</strong> - Upload and download files to/from your controller</li>
+                        <li><strong>Example Code</strong> - Pre-built programs to learn from</li>
+                        <li><strong>Firmware Flasher</strong> - Update your controller's MicroPython firmware</li>
+                      </ul>
+                      <p className="text-gray-300">
+                        Connect via USB or Bluetooth to start programming immediately - no software installation required!
+                      </p>
+                    </section>
+
+                    {/* Getting Started */}
+                    <section>
+                      <h2 className="text-3xl font-bold text-blue-400 mb-4">Getting Started</h2>
+                      
+                      <h3 className="text-xl font-semibold text-cyan-400 mb-3">What You'll Need</h3>
+                      <ul className="list-disc list-inside text-gray-300 space-y-1 ml-4 mb-4">
+                        <li>TETRIX Prizm Pro Controller with MicroPython firmware</li>
+                        <li>12V DC 3000mAh battery pack</li>
+                        <li>USB cable or Bluetooth connection</li>
+                        <li>This web IDE (you're already here!)</li>
+                        <li>TETRIX building components (motors, sensors, structural parts)</li>
+                      </ul>
+
+                      <h3 className="text-xl font-semibold text-cyan-400 mb-3">Understanding the Prizm Pro Hardware</h3>
+                      <div className="bg-slate-900/50 p-4 rounded-lg mb-4">
+                        <p className="text-gray-300 mb-3"><strong>Power System:</strong></p>
+                        <ul className="list-disc list-inside text-gray-300 space-y-1 ml-4 mb-3">
+                          <li>12V DC 3000mAh battery pack</li>
+                          <li>Built-in power switch</li>
+                          <li>Power input and output ports</li>
+                        </ul>
+
+                        <p className="text-gray-300 mb-3"><strong>Control Buttons:</strong></p>
+                        <ul className="list-disc list-inside text-gray-300 space-y-1 ml-4 mb-3">
+                          <li><strong>Black Button (A)</strong> - Programmable button you can read in your code</li>
+                          <li><strong>Red Button (B)</strong> - Hard reset button (restarts the controller)</li>
+                          <li><strong>Green Button (C)</strong> - Starts your program, also readable in code</li>
+                        </ul>
+
+                        <p className="text-gray-300 mb-3"><strong>Motor Connections:</strong></p>
+                        <ul className="list-disc list-inside text-gray-300 space-y-1 ml-4 mb-3">
+                          <li>Four DC motor control ports (Motor 1-4)</li>
+                          <li>Four motor encoder ports for precise movement control</li>
+                        </ul>
+
+                        <p className="text-gray-300 mb-3"><strong>Sensor Connections:</strong></p>
+                        <ul className="list-disc list-inside text-gray-300 space-y-1 ml-4 mb-3">
+                          <li>Six Grove-style sensor ports (Analog, Digital, or I2C capable)</li>
+                          <li>One expansion port for legacy peripherals</li>
+                        </ul>
+
+                        <p className="text-gray-300 mb-3"><strong>Feedback:</strong></p>
+                        <ul className="list-disc list-inside text-gray-300 space-y-1 ml-4">
+                          <li>One speaker for sound output</li>
+                          <li>Three NeoPixel LEDs (Pixels 1, 2, and 3)</li>
+                          <li>USB port for programming</li>
+                        </ul>
+                      </div>
+
+                      <h3 className="text-xl font-semibold text-cyan-400 mb-3">Understanding the Required Code Setup</h3>
+                      <p className="text-gray-300 mb-3">Every Prizm Pro program needs these lines at the beginning:</p>
+                      <pre className="bg-slate-950 p-4 rounded text-sm text-gray-200 overflow-x-auto mb-3">
+{`from prizm_pro import PrizmPro
+import time
+prizm = PrizmPro()  # Create an instance
+prizm.Begin()       # Initialize - waits for green button`}</pre>
+                      <div className="bg-blue-900/20 border border-blue-500/30 rounded-lg p-3 mb-4">
+                        <p className="text-sm text-gray-300">
+                          <strong>Important:</strong> All Prizm Pro functions are called using <code className="text-cyan-400">prizm.</code> 
+                          before the function name (e.g., <code className="text-cyan-400">prizm.setMotorPower()</code>)
+                        </p>
+                      </div>
+                    </section>
+
+                    {/* Python Syntax */}
+                    <section>
+                      <h2 className="text-3xl font-bold text-blue-400 mb-4">Understanding Python Syntax: Indentation</h2>
+                      <p className="text-gray-300 mb-4">
+                        Python uses <strong className="text-cyan-400">indentation</strong> (spaces) instead of curly brackets 
+                        and semicolons to organize code.
+                      </p>
+
+                      <h3 className="text-xl font-semibold text-cyan-400 mb-3">The Golden Rule</h3>
+                      <p className="text-gray-300 mb-3">All code at the same level must line up exactly.</p>
+                      
+                      <pre className="bg-slate-950 p-4 rounded text-sm text-gray-200 overflow-x-auto mb-4">
+{`# No indentation - main level code
+prizm.Begin()
+
+# Start a loop - ends with colon (:)
+while True:
+    # Indented 4 spaces - inside the loop
+    prizm.setRedLED(True, 100)
+    time.sleep(0.5)
+    prizm.setRedLED(False, 0)
+    time.sleep(0.5)`}</pre>
+
+                      <p className="text-gray-300 mb-3"><strong>Key Points:</strong></p>
+                      <ul className="list-disc list-inside text-gray-300 space-y-1 ml-4 mb-4">
+                        <li>The colon <code className="text-cyan-400">:</code> tells Python "the next lines are part of this block"</li>
+                        <li>Everything inside the loop must be indented the same amount</li>
+                        <li>Standard is 4 spaces (not tabs!)</li>
+                      </ul>
+                    </section>
+
+                    {/* Your First Program */}
+                    <section>
+                      <h2 className="text-3xl font-bold text-blue-400 mb-4">Your First Program</h2>
+                      
+                      <h3 className="text-xl font-semibold text-cyan-400 mb-3">Program 1: Blink the Red LED</h3>
+                      <pre className="bg-slate-950 p-4 rounded text-sm text-gray-200 overflow-x-auto mb-3">
+{`from prizm_pro import PrizmPro
+import time
+prizm = PrizmPro()
+prizm.Begin()
+
+# Main program loop
+while True:
+    # Turn on the red LED (Pixel 1)
+    prizm.setRedLED(True, 50)
+    time.sleep(0.5)  # Wait half a second
+    
+    # Turn off the red LED
+    prizm.setRedLED(False, 0)
+    time.sleep(0.5)  # Wait half a second`}</pre>
+
+                      <h3 className="text-xl font-semibold text-cyan-400 mb-3">Program 2: Rainbow Light Show</h3>
+                      <pre className="bg-slate-950 p-4 rounded text-sm text-gray-200 overflow-x-auto mb-3">
+{`from prizm_pro import PrizmPro
+import time
+prizm = PrizmPro()
+prizm.Begin()
+
+# Run a rainbow animation
+prizm.setPixelPattern("rainbow", 5000)
+time.sleep(6)
+
+# Cycle through colors on Pixel 1
+colors = ["red", "orange", "yellow", "green", "blue", "purple"]
+
+while True:
+    for color in colors:
+        prizm.setPixelColor(1, color, 75)
+        time.sleep(0.5)`}</pre>
+
+                      <h3 className="text-xl font-semibold text-cyan-400 mb-3">Program 3: Reading Buttons</h3>
+                      <pre className="bg-slate-950 p-4 rounded text-sm text-gray-200 overflow-x-auto mb-3">
+{`from prizm_pro import PrizmPro
+import time
+prizm = PrizmPro()
+prizm.Begin()
+
+print("Press Button A or Button C!")
+
+while True:
+    if prizm.getButton("A"):
+        prizm.setRedLED(True, 100)
+        print("Button A pressed!")
+        time.sleep(0.2)
+    else:
+        prizm.setRedLED(False, 0)
+    
+    if prizm.getButton("C"):
+        prizm.setGreenLED(True, 100)
+        print("Button C pressed!")
+        time.sleep(0.2)
+    else:
+        prizm.setGreenLED(False, 0)
+    
+    time.sleep(0.01)`}</pre>
+                    </section>
+
+                    {/* Working with Motors */}
+                    <section>
+                      <h2 className="text-3xl font-bold text-blue-400 mb-4">Working with Motors</h2>
+                      
+                      <h3 className="text-xl font-semibold text-cyan-400 mb-3">Program 4: Basic Motor Power</h3>
+                      <pre className="bg-slate-950 p-4 rounded text-sm text-gray-200 overflow-x-auto mb-3">
+{`from prizm_pro import PrizmPro
+import time
+prizm = PrizmPro()
+prizm.Begin()
+
+# Run motor forward at 50% power for 2 seconds
+prizm.setMotorPower(1, 50)
+time.sleep(2)
+
+# Stop the motor
+prizm.setMotorPower(1, 0)
+time.sleep(1)
+
+# Run motor backward
+prizm.setMotorPower(1, -50)
+time.sleep(2)
+
+prizm.setMotorPower(1, 0)`}</pre>
+
+                      <h3 className="text-xl font-semibold text-cyan-400 mb-3">Program 5: Controlling Multiple Motors</h3>
+                      <pre className="bg-slate-950 p-4 rounded text-sm text-gray-200 overflow-x-auto mb-3">
+{`from prizm_pro import PrizmPro
+import time
+prizm = PrizmPro()
+prizm.Begin()
+
+# Run all motors forward at different speeds
+prizm.setMotorPowers(40, 60, 80, 100)
+time.sleep(3)
+
+# Stop all motors
+prizm.setMotorPowers(0, 0, 0, 0)
+time.sleep(1)
+
+# Run all motors backward
+prizm.setMotorPowers(-50, -50, -50, -50)
+time.sleep(3)
+
+prizm.setMotorPowers(0, 0, 0, 0)`}</pre>
+
+                      <h3 className="text-xl font-semibold text-cyan-400 mb-3">Program 6: Using Encoders for Precise Movement</h3>
+                      <pre className="bg-slate-950 p-4 rounded text-sm text-gray-200 overflow-x-auto mb-3">
+{`from prizm_pro import PrizmPro
+import time
+prizm = PrizmPro()
+prizm.Begin()
+
+prizm.resetEncoder(1)
+
+# Move motor exactly 360 degrees
+prizm.setMotorDegree(1, 360, 360)
+
+# Wait until motor reaches target
+while prizm.getMotorBusy(1):
+    current = prizm.getEncoderDegrees(1)
+    print(f"Position: {current} degrees")
+    time.sleep(0.1)
+
+print("Target reached!")
+
+# Return to starting position
+prizm.setMotorDegree(1, 360, 0)
+while prizm.getMotorBusy(1):
+    time.sleep(0.1)`}</pre>
+
+                      <h3 className="text-xl font-semibold text-cyan-400 mb-3">Program 7: Speed Control</h3>
+                      <pre className="bg-slate-950 p-4 rounded text-sm text-gray-200 overflow-x-auto mb-3">
+{`from prizm_pro import PrizmPro
+import time
+prizm = PrizmPro()
+prizm.Begin()
+
+prizm.resetEncoder(1)
+
+# Run at 180 degrees per second for 5 seconds
+prizm.setMotorSpeed(1, 180)
+time.sleep(5)
+
+# Run at 360 degrees per second for 5 seconds
+prizm.setMotorSpeed(1, 360)
+time.sleep(5)
+
+prizm.setMotorSpeed(1, 0)
+
+total = prizm.getEncoderDegrees(1)
+print(f"Total rotation: {total} degrees")`}</pre>
+                    </section>
+
+                    {/* Reading Sensors */}
+                    <section>
+                      <h2 className="text-3xl font-bold text-blue-400 mb-4">Reading Sensors</h2>
+                      
+                      <h3 className="text-xl font-semibold text-cyan-400 mb-3">Program 9: Rotary Angle Sensor</h3>
+                      <pre className="bg-slate-950 p-4 rounded text-sm text-gray-200 overflow-x-auto mb-3">
+{`from prizm_pro import PrizmPro
+import time
+prizm = PrizmPro()
+prizm.Begin()
+
+while True:
+    # Read rotary sensor (0-4095)
+    value = prizm.getRotarySensor(1)
+    percentage = (value / 4095) * 100
+    
+    print(f"Value: {value}, Percentage: {percentage:.1f}%")
+    
+    # Control LED brightness
+    brightness = int(percentage)
+    prizm.setRedLED(True, brightness)
+    
+    time.sleep(0.1)`}</pre>
+
+                      <h3 className="text-xl font-semibold text-cyan-400 mb-3">Program 10: Digital Line Sensor</h3>
+                      <pre className="bg-slate-950 p-4 rounded text-sm text-gray-200 overflow-x-auto mb-3">
+{`from prizm_pro import PrizmPro
+import time
+prizm = PrizmPro()
+prizm.Begin()
+
+while True:
+    line_detected = prizm.getLineSensor(2)
+    
+    if line_detected:
+        print("DARK surface detected!")
+        prizm.setRedLED(True, 100)
+        prizm.setGreenLED(False, 0)
+    else:
+        print("LIGHT surface detected")
+        prizm.setRedLED(False, 0)
+        prizm.setGreenLED(True, 100)
+    
+    time.sleep(0.2)`}</pre>
+
+                      <h3 className="text-xl font-semibold text-cyan-400 mb-3">Program 11: Ultrasonic Distance Sensor</h3>
+                      <pre className="bg-slate-950 p-4 rounded text-sm text-gray-200 overflow-x-auto mb-3">
+{`from prizm_pro import PrizmPro
+import time
+prizm = PrizmPro()
+prizm.Begin()
+
+while True:
+    distance_cm = prizm.getSonicSensor(3, "cm")
+    distance_in = prizm.getSonicSensor(3, "in")
+    
+    print(f"Distance: {distance_cm:.1f} cm ({distance_in:.1f} in)")
+    
+    if distance_cm < 10:
+        prizm.setRedLED(True, 100)
+    elif distance_cm < 30:
+        prizm.setGreenLED(True, 100)
+    else:
+        prizm.setBlueLED(True, 100)
+    
+    time.sleep(0.2)`}</pre>
+
+                      <h3 className="text-xl font-semibold text-cyan-400 mb-3">Program 13: Color Sensor</h3>
+                      <pre className="bg-slate-950 p-4 rounded text-sm text-gray-200 overflow-x-auto mb-3">
+{`from prizm_pro import PrizmPro
+import time
+prizm = PrizmPro()
+prizm.Begin()
+
+while True:
+    red, green, blue = prizm.getColorSensor(5, "RGB")
+    
+    print(f"R:{red} G:{green} B:{blue}")
+    
+    # Display detected color on NeoPixels
+    prizm.setPixelRGB(1, (red, green, blue), 100)
+    
+    # Identify dominant color
+    if red > green and red > blue:
+        print("Dominant: RED")
+    elif green > red and green > blue:
+        print("Dominant: GREEN")
+    elif blue > red and blue > green:
+        print("Dominant: BLUE")
+    
+    time.sleep(0.5)`}</pre>
+
+                      <h3 className="text-xl font-semibold text-cyan-400 mb-3">Program 14: Temperature and Humidity</h3>
+                      <pre className="bg-slate-950 p-4 rounded text-sm text-gray-200 overflow-x-auto mb-3">
+{`from prizm_pro import PrizmPro
+import time
+prizm = PrizmPro()
+prizm.Begin()
+
+while True:
+    temp_c = prizm.getTHSensor(6, "temp", "c")
+    temp_f = prizm.getTHSensor(6, "temp", "f")
+    humidity = prizm.getTHSensor(6, "humid", "c")
+    
+    print(f"Temp: {temp_c:.1f}°C ({temp_f:.1f}°F)")
+    print(f"Humidity: {humidity:.1f}%")
+    
+    if temp_f < 70:
+        prizm.setPixelColor(1, "blue", 50)
+    elif temp_f < 80:
+        prizm.setPixelColor(1, "green", 50)
+    else:
+        prizm.setPixelColor(1, "red", 50)
+    
+    time.sleep(2)`}</pre>
+
+                      <h3 className="text-xl font-semibold text-cyan-400 mb-3">Program 15: Battery Voltage Monitoring</h3>
+                      <pre className="bg-slate-950 p-4 rounded text-sm text-gray-200 overflow-x-auto mb-3">
+{`from prizm_pro import PrizmPro
+import time
+prizm = PrizmPro()
+prizm.Begin()
+
+while True:
+    voltage = prizm.getBatteryVoltage()
+    print(f"Battery: {voltage:.2f}V")
+    
+    if voltage > 12.0:
+        print("Battery: FULL")
+        prizm.setGreenLED(True, 100)
+    elif voltage > 11.0:
+        print("Battery: GOOD")
+        prizm.setGreenLED(True, 50)
+    elif voltage > 10.5:
+        print("Battery: LOW")
+        prizm.setRedLED(True, 75)
+    else:
+        print("Battery: CRITICAL!")
+        prizm.setRedLED(True, 100)
+        prizm.setSoundEffect("red_alert")
+    
+    time.sleep(5)`}</pre>
+                    </section>
+
+                    {/* Using Servos */}
+                    <section>
+                      <h2 className="text-3xl font-bold text-blue-400 mb-4">Using Servos</h2>
+                      
+                      <h3 className="text-xl font-semibold text-cyan-400 mb-3">Program 16: Basic Servo Control</h3>
+                      <pre className="bg-slate-950 p-4 rounded text-sm text-gray-200 overflow-x-auto mb-3">
+{`from prizm_pro import PrizmPro
+import time
+prizm = PrizmPro()
+prizm.Begin()
+
+# MUST enable servos first!
+prizm.enableServos(True)
+
+# Move to 0 degrees
+prizm.setServoPosition(1, 0)
+time.sleep(1)
+
+# Move to 90 degrees (center)
+prizm.setServoPosition(1, 90)
+time.sleep(1)
+
+# Move to 180 degrees
+prizm.setServoPosition(1, 180)
+time.sleep(1)
+
+# Back to center
+prizm.setServoPosition(1, 90)`}</pre>
+
+                      <h3 className="text-xl font-semibold text-cyan-400 mb-3">Program 17: Controlling Servo Speed</h3>
+                      <pre className="bg-slate-950 p-4 rounded text-sm text-gray-200 overflow-x-auto mb-3">
+{`from prizm_pro import PrizmPro
+import time
+prizm = PrizmPro()
+prizm.Begin()
+
+prizm.enableServos(True)
+
+# Slow speed (25%)
+prizm.setServoSpeed(1, 25)
+prizm.setServoPosition(1, 0)
+time.sleep(2)
+prizm.setServoPosition(1, 180)
+time.sleep(4)
+
+# Fast speed (100%)
+prizm.setServoSpeed(1, 100)
+prizm.setServoPosition(1, 0)
+time.sleep(2)`}</pre>
+
+                      <h3 className="text-xl font-semibold text-cyan-400 mb-3">Program 21: Continuous Rotation Servos</h3>
+                      <pre className="bg-slate-950 p-4 rounded text-sm text-gray-200 overflow-x-auto mb-3">
+{`from prizm_pro import PrizmPro
+import time
+prizm = PrizmPro()
+prizm.Begin()
+
+prizm.enableServos(True)
+
+# Full speed forward
+prizm.setCRServoState(1, 100)
+time.sleep(2)
+
+# Half speed forward
+prizm.setCRServoState(1, 50)
+time.sleep(2)
+
+# Stop
+prizm.setCRServoState(1, 0)
+time.sleep(1)
+
+# Reverse
+prizm.setCRServoState(1, -50)
+time.sleep(2)
+
+prizm.setCRServoState(1, 0)`}</pre>
+                    </section>
+
+                    {/* Lights and Sounds */}
+                    <section>
+                      <h2 className="text-3xl font-bold text-blue-400 mb-4">Lights and Sounds</h2>
+                      
+                      <h3 className="text-xl font-semibold text-cyan-400 mb-3">Program 22: Individual Pixel Control</h3>
+                      <pre className="bg-slate-950 p-4 rounded text-sm text-gray-200 overflow-x-auto mb-3">
+{`from prizm_pro import PrizmPro
+import time
+prizm = PrizmPro()
+prizm.Begin()
+
+# Set each pixel to different color
+prizm.setPixelColor(1, "red", 100)
+prizm.setPixelColor(2, "green", 100)
+prizm.setPixelColor(3, "blue", 100)
+time.sleep(2)
+
+# Cycle through color wheel
+for i in range(0, 256, 5):
+    color = prizm.getWheelColor(i)
+    prizm.setPixelRGB(1, color, 50)
+    time.sleep(0.05)
+
+prizm.clearPixels()`}</pre>
+
+                      <h3 className="text-xl font-semibold text-cyan-400 mb-3">Program 25: Playing Tones</h3>
+                      <pre className="bg-slate-950 p-4 rounded text-sm text-gray-200 overflow-x-auto mb-3">
+{`from prizm_pro import PrizmPro
+import time
+prizm = PrizmPro()
+prizm.Begin()
+
+# Play C major scale
+frequencies = [262, 330, 392, 523, 659]
+
+for freq in frequencies:
+    prizm.setSoundTone(freq, 500)
+    time.sleep(0.6)
+
+prizm.setSoundOff()`}</pre>
+
+                      <h3 className="text-xl font-semibold text-cyan-400 mb-3">Program 26: Musical Notes</h3>
+                      <pre className="bg-slate-950 p-4 rounded text-sm text-gray-200 overflow-x-auto mb-3">
+{`from prizm_pro import PrizmPro
+import time
+prizm = PrizmPro()
+prizm.Begin()
+
+# Play C major scale
+notes = ["C4", "D4", "E4", "F4", "G4", "A4", "B4", "C5"]
+
+for note in notes:
+    prizm.setSoundNote(note, 500)
+    time.sleep(0.6)
+
+prizm.setSoundOff()`}</pre>
+
+                      <h3 className="text-xl font-semibold text-cyan-400 mb-3">Program 27: Sound Effects</h3>
+                      <pre className="bg-slate-950 p-4 rounded text-sm text-gray-200 overflow-x-auto mb-3">
+{`from prizm_pro import PrizmPro
+import time
+prizm = PrizmPro()
+prizm.Begin()
+
+effects = ["correct", "incorrect", "siren", 
+           "whistle_up", "phaser", "whoops"]
+
+for effect in effects:
+    print(f"Playing: {effect}")
+    prizm.setSoundEffect(effect)
+    time.sleep(2)`}</pre>
+                    </section>
+
+                    {/* Building Your Robot */}
+                    <section>
+                      <h2 className="text-3xl font-bold text-blue-400 mb-4">Building Your Robot</h2>
+                      
+                      <h3 className="text-xl font-semibold text-cyan-400 mb-3">Program 29: Basic Robot Movement</h3>
+                      <pre className="bg-slate-950 p-4 rounded text-sm text-gray-200 overflow-x-auto mb-3">
+{`from prizm_pro import PrizmPro
+import time
+prizm = PrizmPro()
+prizm.Begin()
+
+def move_forward(power, duration):
+    prizm.setMotorPowers(power, power, power, power)
+    time.sleep(duration)
+    prizm.setMotorPowers(0, 0, 0, 0)
+
+def turn_left(power, duration):
+    prizm.setMotorPowers(-power, power, -power, power)
+    time.sleep(duration)
+    prizm.setMotorPowers(0, 0, 0, 0)
+
+def turn_right(power, duration):
+    prizm.setMotorPowers(power, -power, power, -power)
+    time.sleep(duration)
+    prizm.setMotorPowers(0, 0, 0, 0)
+
+# Test movements
+move_forward(50, 2)
+time.sleep(0.5)
+turn_left(50, 1)
+time.sleep(0.5)
+turn_right(50, 1)`}</pre>
+
+                      <h3 className="text-xl font-semibold text-cyan-400 mb-3">Program 31: Obstacle Avoidance Robot</h3>
+                      <pre className="bg-slate-950 p-4 rounded text-sm text-gray-200 overflow-x-auto mb-3">
+{`from prizm_pro import PrizmPro
+import time
+prizm = PrizmPro()
+prizm.Begin()
+
+# Wait for button press
+while not prizm.getButton("A"):
+    time.sleep(0.1)
+
+while True:
+    distance = prizm.getSonicSensor(3, "cm")
+    
+    if distance < 20 and distance > 0:
+        # Obstacle detected!
+        prizm.setRedLED(True, 100)
+        
+        # Stop and back up
+        prizm.setMotorPowers(0, 0, 0, 0)
+        time.sleep(0.3)
+        prizm.setMotorPowers(-40, -40, -40, -40)
+        time.sleep(1)
+        
+        # Turn right
+        prizm.setMotorPowers(50, -50, 50, -50)
+        time.sleep(0.8)
+        
+        prizm.setRedLED(False, 0)
+    else:
+        # Path clear
+        prizm.setMotorPowers(50, 50, 50, 50)
+    
+    if prizm.getButton("C"):
+        prizm.setMotorPowers(0, 0, 0, 0)
+        break
+    
+    time.sleep(0.05)`}</pre>
+
+                      <h3 className="text-xl font-semibold text-cyan-400 mb-3">Program 32: Line Following Robot</h3>
+                      <pre className="bg-slate-950 p-4 rounded text-sm text-gray-200 overflow-x-auto mb-3">
+{`from prizm_pro import PrizmPro
+import time
+prizm = PrizmPro()
+prizm.Begin()
+
+# Wait for start
+while not prizm.getButton("A"):
+    time.sleep(0.1)
+
+base_speed = 40
+turn_speed = 30
+
+while True:
+    on_line = prizm.getLineSensor(2)
+    
+    if on_line:
+        # On dark line - go straight
+        prizm.setMotorPowers(base_speed, base_speed, 
+                           base_speed, base_speed)
+        prizm.setGreenLED(True, 50)
+    else:
+        # Off line - turn to find it
+        prizm.setMotorPowers(turn_speed, -turn_speed, 
+                           turn_speed, -turn_speed)
+        prizm.setRedLED(True, 50)
+    
+    if prizm.getButton("C"):
+        prizm.setMotorPowers(0, 0, 0, 0)
+        break
+    
+    time.sleep(0.01)`}</pre>
+                    </section>
+
+                    {/* Function Reference */}
+                    <section>
+                      <h2 className="text-3xl font-bold text-blue-400 mb-4">Complete Function Reference</h2>
+                      
+                      <div className="space-y-6">
+                        {/* Initialization */}
+                        <div className="bg-slate-900/50 p-4 rounded-lg">
+                          <h3 className="text-xl font-semibold text-green-400 mb-3">Initialization Functions</h3>
+                          <div className="space-y-3 text-sm">
+                            <div>
+                              <code className="text-cyan-400">prizm.Begin()</code>
+                              <p className="text-gray-400 ml-4">Initializes controller and waits for green button press</p>
+                            </div>
+                            <div>
+                              <code className="text-cyan-400">prizm.End()</code>
+                              <p className="text-gray-400 ml-4">Soft restart of main.py program</p>
+                            </div>
+                          </div>
+                        </div>
+
+                        {/* Motor Control */}
+                        <div className="bg-slate-900/50 p-4 rounded-lg">
+                          <h3 className="text-xl font-semibold text-green-400 mb-3">Motor Control Functions</h3>
+                          <div className="space-y-3 text-sm">
+                            <div>
+                              <code className="text-cyan-400">setMotorPower(channel, power)</code>
+                              <p className="text-gray-400 ml-4">channel: 1-4 | power: -100 to 100</p>
+                            </div>
+                            <div>
+                              <code className="text-cyan-400">setMotorPowers(p1, p2, p3, p4)</code>
+                              <p className="text-gray-400 ml-4">Set all four motors at once</p>
+                            </div>
+                            <div>
+                              <code className="text-cyan-400">setMotorSpeed(channel, speed)</code>
+                              <p className="text-gray-400 ml-4">channel: 1-4 | speed: -720 to 720 deg/sec</p>
+                            </div>
+                            <div>
+                              <code className="text-cyan-400">setMotorDegree(channel, speed, degree)</code>
+                              <p className="text-gray-400 ml-4">Move motor to specific degree position</p>
+                            </div>
+                            <div>
+                              <code className="text-cyan-400">setMotorBrake(channel, mode)</code>
+                              <p className="text-gray-400 ml-4">mode: True (brake) or False (coast)</p>
+                            </div>
+                            <div>
+                              <code className="text-cyan-400">setMotorInvert(channel, state)</code>
+                              <p className="text-gray-400 ml-4">Invert motor direction</p>
+                            </div>
+                          </div>
+                        </div>
+
+                        {/* Encoder Functions */}
+                        <div className="bg-slate-900/50 p-4 rounded-lg">
+                          <h3 className="text-xl font-semibold text-green-400 mb-3">Encoder Functions</h3>
+                          <div className="space-y-3 text-sm">
+                            <div>
+                              <code className="text-cyan-400">getEncoderCount(channel)</code>
+                              <p className="text-gray-400 ml-4">Read raw encoder count</p>
+                            </div>
+                            <div>
+                              <code className="text-cyan-400">getEncoderDegrees(channel)</code>
+                              <p className="text-gray-400 ml-4">Read encoder position in degrees</p>
+                            </div>
+                            <div>
+                              <code className="text-cyan-400">resetEncoder(channel)</code>
+                              <p className="text-gray-400 ml-4">Reset single encoder to zero</p>
+                            </div>
+                            <div>
+                              <code className="text-cyan-400">resetEncoders()</code>
+                              <p className="text-gray-400 ml-4">Reset all encoders to zero</p>
+                            </div>
+                            <div>
+                              <code className="text-cyan-400">getMotorBusy(channel)</code>
+                              <p className="text-gray-400 ml-4">Returns True if motor moving to target</p>
+                            </div>
+                          </div>
+                        </div>
+
+                        {/* Servo Functions */}
+                        <div className="bg-slate-900/50 p-4 rounded-lg">
+                          <h3 className="text-xl font-semibold text-green-400 mb-3">Servo Functions</h3>
+                          <div className="space-y-3 text-sm">
+                            <div>
+                              <code className="text-cyan-400">enableServos(state)</code>
+                              <p className="text-gray-400 ml-4">Enable/disable servo power (must call with True first!)</p>
+                            </div>
+                            <div>
+                              <code className="text-cyan-400">setServoPosition(channel, position)</code>
+                              <p className="text-gray-400 ml-4">channel: 1-6 | position: 0-180 degrees</p>
+                            </div>
+                            <div>
+                              <code className="text-cyan-400">setServoSpeed(channel, speed)</code>
+                              <p className="text-gray-400 ml-4">speed: 0-100 percent</p>
+                            </div>
+                            <div>
+                              <code className="text-cyan-400">setCRServoState(channel, state)</code>
+                              <p className="text-gray-400 ml-4">Continuous rotation servo | state: -100 to 100</p>
+                            </div>
+                          </div>
+                        </div>
+
+                        {/* Button Functions */}
+                        <div className="bg-slate-900/50 p-4 rounded-lg">
+                          <h3 className="text-xl font-semibold text-green-400 mb-3">Button Functions</h3>
+                          <div className="space-y-3 text-sm">
+                            <div>
+                              <code className="text-cyan-400">getButton(button)</code>
+                              <p className="text-gray-400 ml-4">button: "A" (black) or "C" (green) | Returns True/False</p>
+                            </div>
+                          </div>
+                        </div>
+
+                        {/* Sensor Functions */}
+                        <div className="bg-slate-900/50 p-4 rounded-lg">
+                          <h3 className="text-xl font-semibold text-green-400 mb-3">Sensor Functions</h3>
+                          <div className="space-y-3 text-sm">
+                            <div>
+                              <code className="text-cyan-400">getRotarySensor(port)</code>
+                              <p className="text-gray-400 ml-4">Returns 0-4095</p>
+                            </div>
+                            <div>
+                              <code className="text-cyan-400">getLineSensor(port)</code>
+                              <p className="text-gray-400 ml-4">Returns 0 (light) or 1 (dark)</p>
+                            </div>
+                            <div>
+                              <code className="text-cyan-400">getSonicSensor(port, units)</code>
+                              <p className="text-gray-400 ml-4">units: "cm" or "in" | Range: 2-400 cm</p>
+                            </div>
+                            <div>
+                              <code className="text-cyan-400">getTOFSensor(port)</code>
+                              <p className="text-gray-400 ml-4">Returns distance in millimeters</p>
+                            </div>
+                            <div>
+                              <code className="text-cyan-400">getColorSensor(port, level)</code>
+                              <p className="text-gray-400 ml-4">level: "RGB", "red", "green", "blue", "hex", "ambient"</p>
+                            </div>
+                            <div>
+                              <code className="text-cyan-400">getTHSensor(port, measure, unit)</code>
+                              <p className="text-gray-400 ml-4">measure: "temp"/"humid" | unit: "c"/"f"</p>
+                            </div>
+                            <div>
+                              <code className="text-cyan-400">getBatteryVoltage()</code>
+                              <p className="text-gray-400 ml-4">Returns voltage (10.5-12.6V typical)</p>
+                            </div>
+                          </div>
+                        </div>
+
+                        {/* NeoPixel Functions */}
+                        <div className="bg-slate-900/50 p-4 rounded-lg">
+                          <h3 className="text-xl font-semibold text-green-400 mb-3">NeoPixel LED Functions</h3>
+                          <div className="space-y-3 text-sm">
+                            <div>
+                              <code className="text-cyan-400">setPixelColor(pixel, color, brightness)</code>
+                              <p className="text-gray-400 ml-4">pixel: 1,2,3,0(all) | color: "red","green",etc | brightness: 0-100</p>
+                            </div>
+                            <div>
+                              <code className="text-cyan-400">setPixelRGB(pixel, color, brightness)</code>
+                              <p className="text-gray-400 ml-4">color: (r,g,b) tuple (0-255 each)</p>
+                            </div>
+                            <div>
+                              <code className="text-cyan-400">setRedLED(state, brightness)</code>
+                              <p className="text-gray-400 ml-4">Control red LED (Pixel 1)</p>
+                            </div>
+                            <div>
+                              <code className="text-cyan-400">setGreenLED(state, brightness)</code>
+                              <p className="text-gray-400 ml-4">Control green LED (Pixel 2)</p>
+                            </div>
+                            <div>
+                              <code className="text-cyan-400">setBlueLED(state, brightness)</code>
+                              <p className="text-gray-400 ml-4">Control blue LED (Pixel 3)</p>
+                            </div>
+                            <div>
+                              <code className="text-cyan-400">setPixelPattern(name, duration)</code>
+                              <p className="text-gray-400 ml-4">Patterns: "rainbow","comet","chase","fade","sparkle"</p>
+                            </div>
+                            <div>
+                              <code className="text-cyan-400">getWheelColor(value)</code>
+                              <p className="text-gray-400 ml-4">value: 0-255 | Returns RGB tuple for smooth colors</p>
+                            </div>
+                            <div>
+                              <code className="text-cyan-400">clearPixels()</code>
+                              <p className="text-gray-400 ml-4">Turn off all pixels</p>
+                            </div>
+                          </div>
+                        </div>
+
+                        {/* Sound Functions */}
+                        <div className="bg-slate-900/50 p-4 rounded-lg">
+                          <h3 className="text-xl font-semibold text-green-400 mb-3">Sound Functions</h3>
+                          <div className="space-y-3 text-sm">
+                            <div>
+                              <code className="text-cyan-400">setSoundTone(freq, duration)</code>
+                              <p className="text-gray-400 ml-4">freq: Hz | duration: milliseconds</p>
+                            </div>
+                            <div>
+                              <code className="text-cyan-400">setSoundNote(note, duration)</code>
+                              <p className="text-gray-400 ml-4">note: "C4","A5",etc | duration: milliseconds</p>
+                            </div>
+                            <div>
+                              <code className="text-cyan-400">setSoundEffect(name)</code>
+                              <p className="text-gray-400 ml-4">Effects: "siren","correct","incorrect","phaser","whistle_up","red_alert"</p>
+                            </div>
+                            <div>
+                              <code className="text-cyan-400">setSoundOff()</code>
+                              <p className="text-gray-400 ml-4">Stop all sound playback</p>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    </section>
+
+                    {/* Quick Reference Tables */}
+                    <section>
+                      <h2 className="text-3xl font-bold text-blue-400 mb-4">Quick Reference Tables</h2>
+                      
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div className="bg-slate-900/50 p-4 rounded-lg">
+                          <h3 className="text-lg font-semibold text-green-400 mb-3">Power Ranges</h3>
+                          <table className="w-full text-sm">
+                            <thead>
+                              <tr className="border-b border-slate-700">
+                                <th className="text-left py-2 text-cyan-400">Function</th>
+                                <th className="text-left py-2 text-cyan-400">Range</th>
+                              </tr>
+                            </thead>
+                            <tbody className="text-gray-300">
+                              <tr className="border-b border-slate-800">
+                                <td className="py-2">Motor Power</td>
+                                <td className="py-2">-100 to 100</td>
+                              </tr>
+                              <tr className="border-b border-slate-800">
+                                <td className="py-2">Motor Speed</td>
+                                <td className="py-2">-720 to 720 deg/s</td>
+                              </tr>
+                              <tr className="border-b border-slate-800">
+                                <td className="py-2">Servo Position</td>
+                                <td className="py-2">0 to 180 degrees</td>
+                              </tr>
+                              <tr className="border-b border-slate-800">
+                                <td className="py-2">Servo Speed</td>
+                                <td className="py-2">0 to 100%</td>
+                              </tr>
+                              <tr>
+                                <td className="py-2">LED Brightness</td>
+                                <td className="py-2">0 to 100%</td>
+                              </tr>
+                            </tbody>
+                          </table>
+                        </div>
+
+                        <div className="bg-slate-900/50 p-4 rounded-lg">
+                          <h3 className="text-lg font-semibold text-green-400 mb-3">Motor Channels</h3>
+                          <table className="w-full text-sm">
+                            <thead>
+                              <tr className="border-b border-slate-700">
+                                <th className="text-left py-2 text-cyan-400">Channel</th>
+                                <th className="text-left py-2 text-cyan-400">Typical Use</th>
+                              </tr>
+                            </thead>
+                            <tbody className="text-gray-300">
+                              <tr className="border-b border-slate-800">
+                                <td className="py-2">1</td>
+                                <td className="py-2">Front Left</td>
+                              </tr>
+                              <tr className="border-b border-slate-800">
+                                <td className="py-2">2</td>
+                                <td className="py-2">Front Right</td>
+                              </tr>
+                              <tr className="border-b border-slate-800">
+                                <td className="py-2">3</td>
+                                <td className="py-2">Rear Left</td>
+                              </tr>
+                              <tr>
+                                <td className="py-2">4</td>
+                                <td className="py-2">Rear Right</td>
+                              </tr>
+                            </tbody>
+                          </table>
+                        </div>
+                      </div>
+
+                      <div className="bg-slate-900/50 p-4 rounded-lg mt-4">
+                        <h3 className="text-lg font-semibold text-green-400 mb-3">Common Colors</h3>
+                        <div className="flex flex-wrap gap-2">
+                          {['red', 'green', 'blue', 'yellow', 'orange', 'purple', 'cyan', 'white', 'pink', 'lime', 'teal', 'magenta'].map(color => (
+                            <span key={color} className="px-3 py-1 bg-slate-800 rounded text-sm text-gray-300">
+                              "{color}"
+                            </span>
+                          ))}
+                        </div>
+                      </div>
+
+                      <div className="bg-slate-900/50 p-4 rounded-lg mt-4">
+                        <h3 className="text-lg font-semibold text-green-400 mb-3">Musical Notes</h3>
+                        <ul className="text-sm text-gray-300 space-y-1">
+                          <li>Middle C: <code className="text-cyan-400">"C4"</code> (262 Hz)</li>
+                          <li>A above middle C: <code className="text-cyan-400">"A4"</code> (440 Hz)</li>
+                          <li>High C: <code className="text-cyan-400">"C5"</code> (523 Hz)</li>
+                          <li>Scale: C4, D4, E4, F4, G4, A4, B4, C5</li>
+                        </ul>
+                      </div>
+                    </section>
+
+                    {/* Troubleshooting */}
+                    <section>
+                      <h2 className="text-3xl font-bold text-blue-400 mb-4">Troubleshooting</h2>
+                      
+                      <div className="space-y-4">
+                        <div className="bg-slate-900/50 p-4 rounded-lg">
+                          <h3 className="text-lg font-semibold text-yellow-400 mb-2">Motors not moving?</h3>
+                          <ul className="text-sm text-gray-300 space-y-1 list-disc list-inside ml-2">
+                            <li>Check battery: <code className="text-cyan-400">prizm.getBatteryVoltage()</code></li>
+                            <li>Verify motor cables are fully connected</li>
+                            <li>Ensure encoder cables are also connected</li>
+                            <li>Try inverting: <code className="text-cyan-400">prizm.setMotorInvert(1, True)</code></li>
+                          </ul>
+                        </div>
+
+                        <div className="bg-slate-900/50 p-4 rounded-lg">
+                          <h3 className="text-lg font-semibold text-yellow-400 mb-2">Sensors not reading correctly?</h3>
+                          <ul className="text-sm text-gray-300 space-y-1 list-disc list-inside ml-2">
+                            <li>Verify sensor is connected to correct port</li>
+                            <li>Check you're using the right function for your sensor</li>
+                            <li>Some sensors need proper lighting or positioning</li>
+                          </ul>
+                        </div>
+
+                        <div className="bg-slate-900/50 p-4 rounded-lg">
+                          <h3 className="text-lg font-semibold text-yellow-400 mb-2">Program not starting?</h3>
+                          <ul className="text-sm text-gray-300 space-y-1 list-disc list-inside ml-2">
+                            <li>Press the green button after clicking Run</li>
+                            <li>Verify <code className="text-cyan-400">prizm.Begin()</code> is in your code</li>
+                            <li>Check the REPL for syntax errors</li>
+                          </ul>
+                        </div>
+
+                        <div className="bg-slate-900/50 p-4 rounded-lg">
+                          <h3 className="text-lg font-semibold text-yellow-400 mb-2">LEDs not working?</h3>
+                          <ul className="text-sm text-gray-300 space-y-1 list-disc list-inside ml-2">
+                            <li>Check brightness value (must be &gt; 0)</li>
+                            <li>Clear patterns first: <code className="text-cyan-400">prizm.clearPixels()</code></li>
+                            <li>Try setting one LED at a time</li>
+                          </ul>
+                        </div>
+                      </div>
+                    </section>
+
+                    {/* Tips for Success */}
+                    <section>
+                      <h2 className="text-3xl font-bold text-blue-400 mb-4">Tips for Success</h2>
+                      
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div className="bg-slate-900/50 p-4 rounded-lg">
+                          <h3 className="text-lg font-semibold text-green-400 mb-3">Programming Tips</h3>
+                          <ul className="text-sm text-gray-300 space-y-2">
+                            <li>✓ Always include the required setup lines</li>
+                            <li>✓ Use meaningful variable names</li>
+                            <li>✓ Add comments to your code</li>
+                            <li>✓ Test incrementally</li>
+                            <li>✓ Use functions for repeated code</li>
+                          </ul>
+                        </div>
+
+                        <div className="bg-slate-900/50 p-4 rounded-lg">
+                          <h3 className="text-lg font-semibold text-green-400 mb-3">Robot Building Tips</h3>
+                          <ul className="text-sm text-gray-300 space-y-2">
+                            <li>✓ Secure all connections</li>
+                            <li>✓ Balance your robot</li>
+                            <li>✓ Protect sensors</li>
+                            <li>✓ Test before programming</li>
+                            <li>✓ Verify motor directions</li>
+                          </ul>
+                        </div>
+
+                        <div className="bg-slate-900/50 p-4 rounded-lg">
+                          <h3 className="text-lg font-semibold text-green-400 mb-3">Safety Reminders</h3>
+                          <ul className="text-sm text-gray-300 space-y-2">
+                            <li>✓ Always have a stop button (use Button C)</li>
+                            <li>✓ Start with low speeds (30-40%)</li>
+                            <li>✓ Monitor battery voltage</li>
+                            <li>✓ Clear work area</li>
+                            <li>✓ Handle with care</li>
+                          </ul>
+                        </div>
+
+                        <div className="bg-slate-900/50 p-4 rounded-lg">
+                          <h3 className="text-lg font-semibold text-green-400 mb-3">Best Practices</h3>
+                          <ul className="text-sm text-gray-300 space-y-2">
+                            <li>✓ Recharge battery below 11V</li>
+                            <li>✓ Test motors individually first</li>
+                            <li>✓ Use encoder resets when needed</li>
+                            <li>✓ Check sensor positioning</li>
+                            <li>✓ Power off for hardware changes</li>
+                          </ul>
+                        </div>
+                      </div>
+                    </section>
+
+                    {/* Final Tips */}
+                    <div className="bg-gradient-to-r from-blue-900/30 to-purple-900/30 border border-blue-500/30 rounded-lg p-6">
+                      <h3 className="text-xl font-bold text-blue-400 mb-3">🚀 Ready to Build?</h3>
+                      <p className="text-gray-300 mb-3">
+                        You now have all the tools you need to create amazing robots with your Prizm Pro! Start with the 
+                        example code above, experiment with different sensors and motors, and build your own unique creations.
+                      </p>
+                      <p className="text-sm text-gray-400">
+                        <strong>Pro Tip:</strong> Use the Examples dropdown in the code editor to load pre-built programs. 
+                        They're a great way to learn and experiment!
+                      </p>
+                    </div>
+
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {showFlasher && (
+            <div className="fixed inset-0 bg-black/70 backdrop-blur-sm flex items-center justify-center z-50 p-6">
+              <div className="bg-slate-800 rounded-xl border border-blue-500/30 shadow-2xl max-w-2xl w-full">
+                <div className="flex items-center justify-between p-6 border-b border-blue-500/20 bg-slate-900/50">
+                  <div className="flex items-center gap-3">
+                    <Zap className="w-6 h-6 text-orange-400" />
+                    <h2 className="text-2xl font-bold text-gray-100">Flash MicroPython Firmware</h2>
+                  </div>
+                  <button
+                    onClick={() => setShowFlasher(false)}
+                    className="p-2 hover:bg-slate-700 rounded-lg transition-colors"
+                  >
+                    <X className="w-6 h-6" />
+                  </button>
+                </div>
+                
+                <div className="p-6 space-y-6">
+                  <div className="bg-yellow-600/20 border border-yellow-500/30 rounded-lg p-4">
+                    <div className="flex gap-3">
+                      <AlertCircle className="w-5 h-5 text-yellow-400 flex-shrink-0 mt-0.5" />
+                      <div className="text-sm text-yellow-200">
+                        <p className="font-semibold mb-1">Important:</p>
+                        <ul className="list-disc list-inside space-y-1">
+                          <li>Make sure the controller is connected via USB</li>
+                          <li>Flashing will erase all existing files and code</li>
+                          <li>Do not disconnect during the flash process</li>
+                        </ul>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-semibold mb-2 text-gray-300">
+                      Select Firmware Binary (.bin)
+                    </label>
+                    <input
+                      ref={firmwareInputRef}
+                      type="file"
+                      accept=".bin"
+                      onChange={(e) => e.target.files[0] && flashFirmware(e.target.files[0])}
+                      className="block w-full text-sm text-gray-300 file:mr-4 file:py-2 file:px-4 file:rounded file:border-0 file:text-sm file:font-semibold file:bg-blue-600 file:text-white hover:file:bg-blue-500 cursor-pointer"
+                    />
+                  </div>
+
+                  {flashProgress > 0 && (
+                    <div className="space-y-3">
+                      <div className="flex justify-between text-sm">
+                        <span className="text-gray-300">{flashStatus}</span>
+                        <span className="text-blue-400 font-semibold">{flashProgress}%</span>
+                      </div>
+                      <div className="w-full bg-slate-700 rounded-full h-3 overflow-hidden">
+                        <div
+                          className="bg-gradient-to-r from-blue-500 to-cyan-400 h-full transition-all duration-300 rounded-full"
+                          style={{ width: `${flashProgress}%` }}
+                        />
+                      </div>
+                    </div>
+                  )}
+
+                  <div className="bg-slate-900/50 rounded-lg p-4">
+                    <h4 className="font-semibold mb-2 text-gray-300">Download Firmware:</h4>
+                    <a
+                      href="#"
+                      className="text-blue-400 hover:text-blue-300 underline text-sm"
+                      onClick={(e) => {
+                        e.preventDefault();
+                        showNotification('Visit Pitsco.com for firmware downloads', 'info');
+                      }}
+                    >
+                      Download latest MicroPython firmware for Prizm Pro
+                    </a>
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
+        </div>
+      );
+    };
+
+    ReactDOM.render(<PrizmProIDE />, document.getElementById('root'));
+  </script>
+</body>
+</html>
